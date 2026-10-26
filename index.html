@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Battery Shop Challenge</title>
+<meta name="description" content="A fractions game for Grade 6: equivalent fractions, simplest form and comparing fractions at a bot charging station.">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<!-- Shared SVG paint servers for every battery -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="bsc-charge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8ff4ff"/><stop offset=".55" stop-color="#45e3ff"/><stop offset="1" stop-color="#14b2df"/>
+    </linearGradient>
+    <linearGradient id="bsc-metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset=".5" stop-color="#e3e6f6"/><stop offset="1" stop-color="#b9bedb"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div id="stage" aria-label="The Battery Shop Challenge">
+  <div id="bg"></div>
+  <main id="world"></main>
+  <div id="fx" aria-hidden="true"></div>
+  <div id="feedback" role="status" aria-live="polite"></div>
+  <div id="actions"></div>
+  <section id="dialog" hidden aria-live="polite"></section>
+  <header id="hud" hidden></header>
+  <div id="modal" hidden></div>
+</div>
+<div id="rotate">Tip: turn your device sideways for a bigger view.</div>
+
+<noscript><p style="padding:24px">This game needs JavaScript turned on.</p></noscript>
+
+<script src="js/vendor/gsap.min.js"></script>
+<script src="js/core/fraction.js"></script>
+<script src="js/core/store.js"></script>
+<script src="js/core/audio.js"></script>
+<script src="js/data/levels.js"></script>
+<script src="js/data/voices.js"></script>
+<script src="js/ui/anim.js"></script>
+<script src="js/ui/ui.js"></script>
+<script src="js/ui/dialog.js"></script>
+<script src="js/ui/battery.js"></script>
+<script src="js/ui/parts.js"></script>
+<script src="js/core/game.js"></script>
+<script src="js/scenes/menu.js"></script>
+<script src="js/scenes/story.js"></script>
+<script src="js/scenes/level1.js"></script>
+<script src="js/scenes/level2.js"></script>
+<script src="js/scenes/level3.js"></script>
+<script src="js/ui/qa.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

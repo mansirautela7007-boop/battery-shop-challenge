@@ -32,7 +32,7 @@
   /** Three short cards on first play: how the game is controlled. */
   function onboarding(done) {
     const cards = [
-      ['How to play', 'Read what Ira, Byte and Professor Duster say, then press <b>Next ▸</b>.'],
+      ['How to play', 'Read what Ira and Byte say, then press <b>Next ▸</b>.'],
       ['Drag or tap', 'Move things by dragging them. Prefer tapping? Tap the item, then tap where it goes.'],
       ['Stuck?', 'Press <b>💡 Hint</b> for a clue. Press <b>❚❚</b> to pause. Your progress saves by itself.'],
     ];

@@ -2,13 +2,12 @@
 (function (BSC) {
   'use strict';
   const IMG = [
-    'bg/bg_station_morning', 'bg/bg_console', 'bg/bg_learning_bench', 'bg/bg_battery_shop', 'bg/bg_maze_floor', 'bg/bg_delivery_gate', 'bg/bg_endcard',
-    'batteries/battery_circle', 'batteries/battery_square', 'batteries/battery_triangle', 'batteries/slot_charger', 'batteries/slot_lock', 'batteries/shelf_cradle',
+    'bg/bg_station_morning', 'bg/bg_level1_bright', 'bg/bg_console', 'bg/bg_learning_bench', 'bg/bg_battery_shop', 'bg/bg_maze_floor', 'bg/bg_delivery_gate', 'bg/bg_endcard',
+    'batteries/battery_circle', 'batteries/battery_square', 'batteries/battery_triangle', 'batteries/battery_hexagon', 'batteries/slot_charger', 'batteries/slot_lock', 'batteries/shelf_cradle',
     'batteries/tool_cutter', 'batteries/tool_merger', 'batteries/charge_bar_frame',
     'props/l1_platform_rail', 'props/l1_queue_barrier', 'props/l1_stack_tray', 'props/l2_record_board', 'props/l2_gate_closed', 'props/l2_gate_open', 'props/l2_shop_entrance', 'props/l3_charge_wheel', 'props/l3_wheel_stand',
     'chars/ira_idle', 'chars/ira_talk', 'chars/ira_point', 'chars/ira_think', 'chars/ira_handover', 'chars/ira_cheer', 'chars/ira_wave',
     'chars/byte_hover', 'chars/byte_scan', 'chars/byte_whistle', 'chars/byte_worried', 'chars/byte_confused', 'chars/byte_nod', 'chars/byte_point', 'chars/byte_cheer', 'chars/byte_oops',
-    'chars/duster_explain', 'chars/duster_point', 'chars/duster_wave',
     ...['zip', 'bolt', 'volt', 'pixel', 'spark', 'gizmo', 'rivet', 'nova'].map((b) => `chars/bot_${b}_neutral`),
     ...['bolt', 'pixel', 'spark', 'gizmo', 'rivet', 'nova'].map((b) => `chars/bot_${b}_happy`),
   ].map((p) => `assets/${p}.webp`);
@@ -48,7 +47,7 @@
     if (BSC.Store.get().settings.reduceMotion) document.body.classList.add('reduce-motion');
     BSC.UI.fit();
     window.addEventListener('resize', BSC.UI.fit);
-    // Art that hangs off the stage (Duster's half body) makes it scrollable; never let it scroll (backup for overflow: clip).
+    // Art that hangs off the stage (Ira's half body in the lesson) makes it scrollable; never let it scroll (backup for overflow: clip).
     const stage = document.getElementById('stage');
     stage.addEventListener('scroll', () => { stage.scrollTop = 0; stage.scrollLeft = 0; });
     BSC.UI.hud.build();

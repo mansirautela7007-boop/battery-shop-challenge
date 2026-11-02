@@ -9,7 +9,7 @@
   const FLOW = [
     { id: 'prologue', level: 1, label: 'Story: the crowded slot' },
     { id: 'l1learn', level: 1, label: 'Learn: cut and join' },
-    { id: 'l1game', level: 1, label: 'Play: charge the bots' },
+    { id: 'l1game', level: 1, label: 'Find the equivalent charge' },
     { id: 'shopIntro', level: 2, label: 'Story: out of stock' },
     { id: 'l2learn', level: 2, label: 'Learn: the Merger' },
     { id: 'l2game', level: 2, label: 'Play: the gate maze' },

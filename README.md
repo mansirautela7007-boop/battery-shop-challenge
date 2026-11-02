@@ -1,7 +1,7 @@
 # The Battery Shop Challenge
 
 A Grade 6 fractions game in HTML, CSS, JavaScript and GSAP.
-The player helps Ira run a bot charging station, learns with Professor Duster, and helps Byte make good decisions.
+The player helps Ira run a bot charging station, learns from her, and helps Byte make good decisions.
 
 | Level | Skill | Learn | Play |
 |---|---|---|---|
@@ -10,7 +10,8 @@ The player helps Ira run a bot charging station, learns with Professor Duster, a
 | 3 | Comparing fractions | Same pieces first, then compare | Tutorial + 10 rounds: spin, charge both batteries, choose who takes the trip; rounds 7–10 are numbers-only |
 
 The story runs: Prologue → Level 1 → shop story → Level 2 → delivery story → Level 3 → ending.
-All story lines, levels, numbers and feedback come from the storyboard sheet (Context, Level 1_Draft 2, Level 2_Draft 2, Level 3_Draft 1).
+All story lines, levels, numbers and feedback come from the storyboard sheet: Context_Final for the stories, and Level 1_Draft 2, Level 2_Draft 2 and Level 3_Draft 1 for the levels.
+Ira teaches every lesson, as in the sheet.
 
 ## Run it
 
@@ -75,6 +76,7 @@ assets/               optimised artwork (WebP) + fonts (SIL OFL)
 - **Circle:** equal wedges, filled clockwise from 12 o'clock.
 - **Triangle:** fan slices from the top vertex to equal steps along the base, so every part has equal area.
 - **Diamond:** a true four-sided rhombus, divided by lines parallel to its sides.
+- **Hexagon:** columns are cut where the area is equal, and rows split every vertical slice in the same ratio, so every part has the same area. Parts are equal to within drawing precision (under 0.3%).
 - In any comparison, all batteries of the same shape use the same casing and window size.
 - Checks use exact integer maths: cross-multiplication for equality and comparison, and real common factors for simplifying.
 
@@ -82,12 +84,12 @@ assets/               optimised artwork (WebP) + fonts (SIL OFL)
 
 | Asset | Decision |
 |---|---|
-| Characters (Ira ×7 used; `ira_console` removed, Byte ×9, Duster ×3, 8 bots) | Used. Pose swaps and movement with GSAP. Duster gets the hologram look in CSS. Fractions show on the bots' blank chest screens in HTML. |
+| Characters (Ira ×7 used; `ira_console` removed, Byte ×9, 8 bots; Duster not used) | Used. Pose swaps and movement with GSAP. Fractions show on the bots' blank chest screens in HTML. |
 | `bot_zip_happy`, `bot_volt_happy` (not generated) | Neutral pose plus a hop animation. |
 | Backgrounds (7) | Used. Station evening (missing) = the morning station with a CSS evening tint. |
 | `battery_circle`, `battery_square`, `battery_triangle` | Used as casings. An exact SVG region sits inside each painted window. |
 | `battery_rectangle` | Not used: its window is much wider than 2:1. Replaced by a code casing in the same style with a 2:1 window. |
-| `battery_diamond` (needs-review: hexagonal window) | Not used. Code casing with a true rhombus window. |
+| `battery_diamond` (needs-review: hexagonal window) | Used as the **hexagon** battery (`battery_hexagon.webp`) for Level 1 A13–A15 and Level 2 orders 7–8, as the sheet now lists. Level 3 rounds 7–8 keep the code-drawn rhombus. |
 | Slot charger, slot lock, shelf cradle, cutter, Merger, charge bar frame, platform rail, queue barrier, stack tray, record board, charge wheel | Used. |
 | `bot_*_top` (needs-review: not top-down) | Not used. The maze uses a code-drawn top-down bot token. |
 | `l2_gate_*`, `l2_shop_entrance` (needs-review: front perspective) | Not used. Maze gates and the shop door are top-down CSS pieces. |
@@ -107,7 +109,7 @@ If your copy contains `assets/sizes.json`, `battery_rectangle.webp`, `l2_gate_*.
 ## Known limitations
 
 - Characters are single poses (no lip-sync or frame animation).
-- Voice-over: every dialogue line is voiced. The prologue (16 lines, `.mp3`) uses ElevenLabs voices. All other fixed lines (72, `.m4a`) were made for free with the macOS `say` voices: Ira = Tara (India), Byte = Junior, Professor Duster = Grandpa (UK), Narrator = Shelley (UK), Bot = Fred. Lines built at runtime with level numbers (bot orders, scores, round set-ups) are spoken by the browser's built-in speech synthesis, so they sound best on a Mac, where the same voices exist, and fall back to a default English voice elsewhere. To change a fixed line, re-record its file in `assets/voice/` and keep the `"Speaker|exact text"` key in `js/data/voices.js` matching the text. Voices follow the Sound toggle, stop on Next and Skip, and pause with the Pause menu.
+- Voice-over: every dialogue line is voiced. All 92 fixed lines (`.m4a`) were made for free with the macOS `say` voices: Ira = Tara (India), Byte = Junior, Narrator = Shelley (UK), Bot = Fred. Lines built at runtime with level numbers (bot orders, scores, round set-ups) are spoken by the browser's built-in speech synthesis, so they sound best on a Mac, where the same voices exist, and fall back to a default English voice elsewhere. To change a fixed line, re-record its file in `assets/voice/` and keep the `"Speaker|exact text"` key in `js/data/voices.js` matching the text. Voices follow the Sound toggle, stop on Next and Skip, and pause with the Pause menu.
 - Music and sound effects are synthesised in the browser.
 - Portrait phones show a smaller, letterboxed stage, so landscape is recommended.
 - Tested end-to-end in Chromium (desktop, plus mobile touch emulation). Safari and Firefox on real devices have not been tested yet.

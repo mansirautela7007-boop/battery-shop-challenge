@@ -1,4 +1,5 @@
 /* Level data, transcribed from the storyboard sheet (Level 1_Draft 2, Level 2_Draft 2, Level 3_Draft 1).
+   Level 1 A13–A15 and Level 2 orders 7–8 use the hexagon battery; Level 3 rounds 7–8 keep the diamond, as listed.
    The engine reads these arrays; there are no level-specific numbers in the scene code. */
 (function (BSC) {
   'use strict';
@@ -19,9 +20,9 @@
     { id: 'A10', shape: 'triangle', need: [6, 8], slots: [[3, 4], [1, 4], [2, 4], [2, 3]], op: ['÷', 2], newShape: true },
     { id: 'A11', shape: 'triangle', need: [3, 6], slots: [[6, 12], [3, 12], [4, 12], [6, 8]], op: ['×', 2] },
     { id: 'A12', shape: 'triangle', need: [4, 12], slots: [[2, 6], [4, 6], [2, 4], [1, 6]], op: ['÷', 2] },
-    { id: 'A13', shape: 'diamond', need: [2, 5], slots: [[6, 15], [2, 15], [5, 15], [6, 10]], op: ['×', 3], newShape: true },
-    { id: 'A14', shape: 'diamond', need: [2, 8], slots: [[4, 16], [2, 16], [3, 16], [4, 12]], op: ['×', 2] },
-    { id: 'A15', shape: 'diamond', need: [12, 18], slots: [[6, 9], [6, 18], [9, 18], [6, 8]], op: ['÷', 2] },
+    { id: 'A13', shape: 'hexagon', need: [2, 5], slots: [[6, 15], [2, 15], [5, 15], [6, 10]], op: ['×', 3], newShape: true },
+    { id: 'A14', shape: 'hexagon', need: [2, 8], slots: [[4, 16], [2, 16], [3, 16], [4, 12]], op: ['×', 2] },
+    { id: 'A15', shape: 'hexagon', need: [12, 18], slots: [[6, 9], [6, 18], [9, 18], [6, 8]], op: ['÷', 2] },
   ].map((l, i) => Object.assign(l, { bot: BOTS[i % BOTS.length], answer: l.slots[0] }));
 
   // ---------- Level 2 game: gate maze + battery shop ----------
@@ -32,8 +33,8 @@
     { id: 'Order 4', shape: 'circle', order: [4, 12], gates: [2, 2, 3, 4], shelf: [[1, 3], [1, 4], [1, 2]], record: 2, bot: 'rivet' },
     { id: 'Order 5', shape: 'square', order: [12, 18], gates: [2, 3, 6, 4], shelf: [[1, 2], [3, 4], [2, 3]], record: 2, bot: 'nova', newShape: true },
     { id: 'Order 6', shape: 'square', order: [9, 12], gates: [2, 4, 3, 6], shelf: [[2, 3], [1, 3], [3, 4]], record: 1, bot: 'bolt' },
-    { id: 'Order 7', shape: 'diamond', order: [10, 20], gates: [5, 2, 4, 10], shelf: [[2, 5], [1, 2], [1, 4]], record: 2, bot: 'volt', newShape: true },
-    { id: 'Order 8', shape: 'diamond', order: [16, 24], gates: [4, 2, 2, 8], shelf: [[3, 4], [2, 3], [1, 2]], record: 3, bot: 'zip' },
+    { id: 'Order 7', shape: 'hexagon', order: [10, 20], gates: [5, 2, 4, 10], shelf: [[2, 5], [1, 2], [1, 4]], record: 2, bot: 'volt', newShape: true },
+    { id: 'Order 8', shape: 'hexagon', order: [16, 24], gates: [4, 2, 2, 8], shelf: [[3, 4], [2, 3], [1, 2]], record: 3, bot: 'zip' },
   ];
   // One maze for every order: start (left) → corridor → shop (right); four gate loops (two above, two below).
   // Grid cells: '#' wall, '.' path, 'S' start, 'E' shop door, 'a'..'d' gate slots (gate i = level.gates[i]).

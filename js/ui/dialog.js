@@ -7,7 +7,6 @@
   const PORTRAIT = {
     Ira: { img: 'chars/ira_talk', size: '330%', pos: '50% 3%' },
     Byte: { img: 'chars/byte_hover', size: '150%', pos: '50% 18%' },
-    Duster: { img: 'chars/duster_explain', size: '320%', pos: '52% 2%', holo: true },
     Zip: { img: 'chars/bot_zip_neutral', size: '260%', pos: '50% 4%' },
     Bolt: { img: 'chars/bot_bolt_neutral', size: '230%', pos: '50% 10%' },
     Volt: { img: 'chars/bot_volt_neutral', size: '230%', pos: '50% 8%' },
@@ -18,7 +17,7 @@
     Nova: { img: 'chars/bot_nova_neutral', size: '260%', pos: '50% 4%' },
     Bot: { img: 'chars/bot_gizmo_neutral', size: '250%', pos: '50% 5%' },
   };
-  const NAMES = { Duster: 'Professor Duster', Narrator: 'Narrator' };
+  const NAMES = { Narrator: 'Narrator' };
 
   let resolver = null;
   const Dialog = {
@@ -67,7 +66,6 @@
   const POSES = {
     ira: ['idle', 'talk', 'point', 'think', 'handover', 'cheer', 'wave'],
     byte: ['hover', 'scan', 'whistle', 'worried', 'confused', 'nod', 'point', 'cheer', 'oops'],
-    duster: ['explain', 'point', 'wave'],
   };
   const BOTS = ['zip', 'bolt', 'volt', 'pixel', 'spark', 'gizmo', 'rivet', 'nova'];
   const BOT_HAPPY = ['bolt', 'pixel', 'spark', 'gizmo', 'rivet', 'nova'];
@@ -99,7 +97,7 @@
     /** Place an actor. x = centre in stage px, bottom = px from stage bottom, h = height px. */
     add(id, { char, pose, x, bottom = 150, h = 420, flip = false, holo = false, parent = null, cls = '' }) {
       const a = document.createElement('div');
-      a.className = `actor ${holo || char === 'duster' ? 'holo' : ''} ${cls}`;
+      a.className = `actor ${holo ? 'holo' : ''} ${cls}`;
       a.style.cssText = `left:${x}px;bottom:${bottom}px;height:${h}px;`;
       a.innerHTML = `<div class="flip"${flip ? ' style="transform:scaleX(-1)"' : ''}><img alt="" src="${src(char, pose)}"></div>`;
       if (BOTS.includes(char)) {
@@ -141,7 +139,7 @@
     /** Short reaction while speaking, optionally switching pose. */
     talk(id, pose) { if (pose) Cast.pose(id, pose); const a = actors[id]; if (!a || BSC.Anim.reduced) return; gsap.fromTo(a.el.querySelector('.flip'), { y: 0 }, { y: -6, duration: 0.18, yoyo: true, repeat: 1, ease: 'sine.out' }); },
     hop(id) { const a = actors[id]; if (!a || BSC.Anim.reduced) return null; return gsap.fromTo(a.el.querySelector('.flip'), { y: 0 }, { y: -26, duration: 0.22, yoyo: true, repeat: 1, ease: 'power2.out' }); },
-    idle(id) { const a = actors[id]; if (!a) return; if (a.char === 'byte' || a.char === 'duster' || a.char === 'rivet') BSC.Anim.bob(a.el.querySelector('img'), 7, 1.6); else BSC.Anim.breathe(a.el.querySelector('img')); },
+    idle(id) { const a = actors[id]; if (!a) return; if (a.char === 'byte' || a.char === 'rivet') BSC.Anim.bob(a.el.querySelector('img'), 7, 1.6); else BSC.Anim.breathe(a.el.querySelector('img')); },
     clear() { Object.keys(actors).forEach((k) => delete actors[k]); },
   };
 

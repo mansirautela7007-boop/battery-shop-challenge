@@ -5,7 +5,7 @@
    Highlight language (used everywhere):
      selectable  → dashed sky outline on hover/focus
      selected    → solid sky ring + lift
-     demo        → orange dashed ring (Duster/Ira is showing it)
+     demo        → orange dashed ring (Ira is showing it)
      ok / bad    → green ring + ✓ badge / coral ring + ! badge + wiggle (never colour alone) */
 
 @font-face { font-family: 'Baloo 2'; font-weight: 600; font-display: swap; src: url(../assets/fonts/baloo-2-latin-600-normal.woff2) format('woff2'); }
@@ -54,6 +54,7 @@ button { font: inherit; color: inherit; }
 #bg::after { content: ''; position: absolute; inset: 0; background: none; } /* artwork shown as is: no haze */
 #bg[data-tint="evening"]::after { background: linear-gradient(180deg, rgba(90,30,110,.45), rgba(255,140,60,.18) 45%, rgba(7,11,31,.45)); }
 #bg[data-tint="dim"]::after { background: rgba(7,11,31,.45); }
+#bg[data-tint="faded"]::after { background: rgba(244,242,255,.58); } /* scenery steps back behind the play pieces, still sharp (no blur) */
 #bg[data-tint="soft"]::after { background: linear-gradient(180deg, transparent 55%, rgba(7,11,31,.3)); }
 #world { position: absolute; inset: 0; }
 #fx { position: absolute; inset: 0; pointer-events: none; z-index: 40; }
@@ -103,9 +104,8 @@ body.busy #world, body.busy #actions { cursor: progress; }
 /* ---------- Dialogue ---------- */
 #dialog { position: absolute; left: 16px; bottom: 14px; width: 860px; z-index: 25; display: flex; align-items: flex-end; gap: 14px; --who: var(--grape); --who-soft: #efe8ff; }
 #dialog.who-byte { --who: var(--mint-d); --who-soft: #dcfaef; }
-#dialog.who-duster { --who: var(--sky-d); --who-soft: #e1efff; }
 #dialog.who-narrator { --who: var(--orange-d); --who-soft: #fff0dd; }
-#dialog[class*="who-"]:not(.who-ira):not(.who-byte):not(.who-duster):not(.who-narrator) { --who: var(--coral-d); --who-soft: #ffe6ec; }
+#dialog[class*="who-"]:not(.who-ira):not(.who-byte):not(.who-narrator) { --who: var(--coral-d); --who-soft: #ffe6ec; }
 #dialog .portrait { flex: none; width: 104px; height: 104px; border-radius: 50%; background-color: var(--who-soft); background-repeat: no-repeat; border: 5px solid #fff; box-shadow: 0 0 0 4px var(--who), 0 8px 18px rgba(30,34,82,.3); display: grid; place-items: center; }
 #dialog .portrait.holo { filter: saturate(.75); }
 #dialog .portrait.talking { animation: talk .34s ease-in-out infinite alternate; }
@@ -265,14 +265,33 @@ body.busy #world, body.busy #actions { cursor: progress; }
 .status.done { background: #e3faee; color: var(--mint-d); } .status.ready { background: #fff1d6; color: var(--warn-ink); } .status.lock { background: var(--cloud); color: var(--muted); }
 
 /* ---------- Level 1 game ---------- */
-.slots-row { position: absolute; left: 316px; width: 864px; top: 150px; height: 365px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; align-items: end; z-index: 2; }
+/* Level 1 play: banner, light platform, bot on its pad, four chargers (layout from the "find the equivalent charge" mock-up) */
+.l1-banner { position: absolute; left: 50%; top: 128px; translate: -50% 0; z-index: 4; display: flex; align-items: center; height: 84px; padding: 0 44px; border-radius: 42px; background: #fff; border: 3px solid #cdbdff; box-shadow: 0 6px 0 #ddd3ff, 0 16px 30px rgba(30,34,82,.14); font-family: var(--f-display); font-weight: 800; font-size: 32px; color: var(--ink); white-space: nowrap; }
+.l1-banner .fr { font-size: 30px; margin: 0 2px; }
+#stage:has(#feedback.show) .l1-banner { opacity: 0; }
+#stage:has(.l1-banner) #feedback { top: 140px; }
+.marks { position: absolute; width: 44px; height: 44px; pointer-events: none; }
+.marks i { position: absolute; left: 50%; bottom: 50%; width: 7px; height: 20px; margin-left: -3.5px; border-radius: 4px; background: var(--sun); transform-origin: 50% 160%; box-shadow: 0 2px 0 #e9a400; }
+.marks i:nth-child(1) { rotate: -50deg; } .marks i:nth-child(2) { rotate: 0deg; } .marks i:nth-child(3) { rotate: 50deg; }
+.l1-banner .marks.l { left: -58px; top: 8px; rotate: -40deg; } .l1-banner .marks.r { right: -58px; top: 8px; rotate: 40deg; }
+.botcard .marks.bot { left: -14px; top: 12px; rotate: -45deg; z-index: 2; }
+.slots-row { position: absolute; left: 323px; width: 880px; top: 290px; height: 302px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; align-items: end; justify-items: center; z-index: 2; }
+.l1-platform { position: absolute; left: 50px; top: 552px; width: 1195px; height: 96px; z-index: 1; border-radius: 48px; background: linear-gradient(180deg, #ffffff, #ecebfb 55%, #d9d6f2); box-shadow: inset 0 -7px 0 #c9c4ea, 0 18px 30px rgba(60,50,140,.18); }
+.l1-platform .strip { position: absolute; left: 270px; right: 26px; top: 12px; height: 60px; border-radius: 30px; background: linear-gradient(180deg, #e3e0f8, #f3f1ff); box-shadow: inset 0 4px 8px rgba(80,60,170,.16); }
+.l1-platform .pad { position: absolute; top: 12px; width: 190px; height: 38px; margin-left: -95px; border-radius: 50%; border: 4px solid #7ff0ff; background: radial-gradient(ellipse, rgba(127,240,255,.35), rgba(127,240,255,0) 70%); box-shadow: 0 0 14px #45e3ff, inset 0 0 10px rgba(69,227,255,.6); }
+.l1-platform .botpad { position: absolute; left: 30px; top: 18px; width: 200px; height: 52px; border-radius: 50%; background: radial-gradient(ellipse, #f6f2ff 45%, #e7ddff 70%); border: 5px solid #b48cff; box-shadow: 0 0 18px #a07cff, inset 0 0 12px rgba(160,124,255,.55); }
+.botcard { position: absolute; left: 73px; top: 300px; width: 215px; height: 285px; border-radius: 28px; z-index: 3; touch-action: none; cursor: grab; transition: translate .2s; }
+.need-tag { position: absolute; left: -16px; top: -92px; display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-radius: 24px; background: #fff; border: 3px solid #e4dcff; box-shadow: 0 5px 0 #ddd3ff, 0 12px 24px rgba(30,34,82,.12); white-space: nowrap; font-size: 26px; font-weight: 800; color: var(--ink); }
+.need-tag::after { content: ''; position: absolute; left: 112px; bottom: -14px; width: 24px; height: 24px; background: #fff; border-right: 3px solid #e4dcff; border-bottom: 3px solid #e4dcff; rotate: 45deg; border-bottom-right-radius: 5px; }
+.need-tag > span { font-family: var(--f-display); font-weight: 800; font-size: 25px; color: var(--ink); }
+.need-tag .batt { flex: none; }
+.drag-hint { position: absolute; left: 196px; top: 590px; width: 170px; height: 80px; z-index: 4; pointer-events: none; }
+.drag-hint svg { width: 100%; height: 100%; overflow: visible; }
+.drag-hint path { fill: none; stroke: var(--ink-2); stroke-width: 3.5; stroke-dasharray: 9 8; stroke-linecap: round; animation: hintdash 1.2s linear infinite; }
+.drag-hint span { position: absolute; left: 118px; top: 20px; font-size: 46px; filter: drop-shadow(0 4px 6px rgba(30,34,82,.3)); animation: hintbob 1.2s ease-in-out infinite; }
+@keyframes hintdash { to { stroke-dashoffset: -34; } }
+@keyframes hintbob { 50% { translate: 8px -4px; } }
 /* Level 1 play: silver charging platform with five pads (bot + four chargers), as in the station artwork */
-.l1-platform { position: absolute; left: 100px; top: 470px; width: 1080px; height: 92px; z-index: 1; border-radius: 46px 46px 30px 30px; background: linear-gradient(180deg, #f7f8fd, #d7dbee 45%, #b3b8d6); box-shadow: inset 0 -6px 0 #9aa0c4, 0 22px 34px rgba(30,34,82,.35); }
-.l1-platform .deck { position: absolute; left: 22px; right: 22px; top: 8px; height: 50px; border-radius: 34px; background: linear-gradient(180deg, #474b7c, #5f6394); box-shadow: inset 0 3px 0 rgba(0,0,0,.25); }
-.l1-platform .pad { position: absolute; top: 12px; width: 168px; height: 42px; margin-left: -84px; border-radius: 50%; background: radial-gradient(ellipse at 50% 45%, #2b2f66 52%, #8b6bff 58%, #3a2f8f 66%, #2b2f66 74%); box-shadow: 0 0 12px rgba(139,107,255,.45); }
-.l1-platform .glow { position: absolute; bottom: 14px; width: 120px; height: 8px; margin-left: -60px; border-radius: 4px; }
-.l1-platform .glow.c { background: #7ff0ff; box-shadow: 0 0 12px #45e3ff; }
-.l1-platform .glow.p { background: #c4a8ff; box-shadow: 0 0 12px #a07cff; }
 .slot { position: relative; display: grid; justify-items: center; gap: 6px; padding: 8px 6px 10px; border-radius: 24px; transition: translate .2s, scale .2s; }
 .slot-dock { position: relative; margin-top: -10px; }
 .slot-dock .slot-base { display: block; width: 100%; filter: drop-shadow(0 10px 10px rgba(30,34,82,.3)); }
@@ -281,10 +300,6 @@ body.busy #world, body.busy #actions { cursor: progress; }
 .slot-dock .label-plate .fr b { border-bottom-color: var(--sky-d); }
 .slot-dock .label-plate.dim { background: #fff; color: var(--line-2); }
 .slot.over { outline: 5px solid var(--sky); outline-offset: 4px; translate: 0 -6px; scale: 1.03; }
-.botcard { position: absolute; left: 108px; top: 200px; width: 200px; height: 315px; border-radius: 28px; z-index: 3; touch-action: none; cursor: grab; transition: translate .2s; }
-.need-tag { position: absolute; left: 50%; top: 32px; translate: -50% 0; display: flex; align-items: center; gap: 8px; padding: 5px 12px 4px; font-size: 22px; white-space: nowrap; }
-.need-tag > span { font-family: var(--f-display); font-weight: 800; font-size: 17px; color: var(--ink-2); }
-.need-tag .batt { flex: none; }
 .botcard:hover { translate: 0 -4px; }
 .botcard.dragging { opacity: .35; }
 .botcard, .botcard img, .drag-ghost img { -webkit-user-drag: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -351,7 +366,7 @@ body.busy #world, body.busy #actions { cursor: progress; }
 body.portrait #rotate { display: block; position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); background: #fff; color: var(--ink); border-radius: 14px; padding: 8px 14px; font-size: 14px; z-index: 99; }
 
 /* QA jump menu (testing only, see js/ui/qa.js) */
-#qa-btn { position: absolute; left: 50%; top: 0; transform: translateX(-50%); z-index: 59; padding: 3px 14px 5px; border: 0; border-radius: 0 0 10px 10px; background: var(--ink); color: var(--sun); font-family: var(--f-display); font-weight: 800; font-size: 14px; letter-spacing: .08em; cursor: pointer; opacity: .75; }
+#qa-btn { position: absolute; left: 0; bottom: 0; z-index: 59; padding: 5px 14px 3px; border: 0; border-radius: 0 10px 0 0; background: var(--ink); color: var(--sun); font-family: var(--f-display); font-weight: 800; font-size: 14px; letter-spacing: .08em; cursor: pointer; opacity: .75; }
 #qa-btn:hover { opacity: 1; }
 #modal .card.qa-card { width: 1180px; max-width: 96%; padding: 20px 24px; text-align: left; }
 .qa-card h2 { text-align: center; font-size: 30px !important; }
@@ -370,8 +385,7 @@ body.portrait #rotate { display: block; position: fixed; left: 50%; bottom: 14px
 /* Level 1 "cut and join" intro (storyboard frames 1–9) */
 #cutflow { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
 #cutflow > * { pointer-events: auto; }
-.actor.cf-duster { z-index: 5; }
-.actor.cf-duster img { filter: saturate(.6) brightness(1.08) sepia(.15) hue-rotate(150deg) contrast(1.05) drop-shadow(0 10px 18px rgba(30,34,82,.35)); }
+.actor.cf-teacher { z-index: 5; }
 .sbubble { position: absolute; background: #fff; color: var(--ink); border: 3px solid var(--bubble-line); border-radius: 24px; padding: 16px 20px 18px 26px; font-size: 20px; line-height: 1.38; box-shadow: 0 12px 28px rgba(30,34,82,.25); z-index: 8; }
 .sbubble::before { content: ''; position: absolute; left: 100px; bottom: -13px; width: 20px; height: 20px; background: #fff; border-right: 3px solid var(--bubble-line); border-bottom: 3px solid var(--bubble-line); rotate: 45deg; border-radius: 0 0 4px 0; }
 .sbubble p { margin: 0; font-weight: 600; }
@@ -434,3 +448,5 @@ body.reduce-motion #bg[data-tint="plain"]::before, body.reduce-motion .btn.prima
 .charge-meter.full .cm-bar b { background: linear-gradient(90deg, var(--mint), #7ef0b8); box-shadow: none; }
 @media (prefers-reduced-motion: reduce) { .actor.plugged.charging .chest .fr { animation: none; } }
 body.reduce-motion .actor.plugged.charging .chest .fr { animation: none; }
+@media (prefers-reduced-motion: reduce) { .drag-hint path, .drag-hint span { animation: none; } }
+body.reduce-motion .drag-hint path, body.reduce-motion .drag-hint span { animation: none; }

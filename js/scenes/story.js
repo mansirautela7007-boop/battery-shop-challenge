@@ -1,15 +1,9 @@
-/* Story scenes from the Context tab: Prologue (scenes 1–12), Shop intro, Delivery intro, Finale. */
+/* Story scenes from the Context_Final tab: Context 1 (prologue, scenes 1–4), Shop intro, Delivery intro, Finale. */
 (function (BSC) {
   'use strict';
   const { UI, Cast, Anim, Parts, Battery, Game } = BSC;
 
-  /** Story Skip control (top-right under the HUD). */
-  function skipButton(ctx, target) {
-    const b = UI.button('Skip story ▸▸', { variant: 'ghost', onClick: () => Game.go(target) });
-    b.style.cssText = 'position:absolute;right:214px;top:15px;z-index:31;min-height:46px;';
-    UI.world().appendChild(b);
-  }
-  /** Primary in-scene button (e.g. "Call Professor Duster") that the story waits for. */
+  /** Primary in-scene button (e.g. "Help Byte") that the story waits for. */
   async function waitButton(ctx, label) {
     const b = UI.button(label, { variant: 'primary' });
     UI.actions([b]);
@@ -20,8 +14,7 @@
   // ---------------------------------------------------------------- Prologue
   BSC.Scenes.prologue = async function (ctx) {
     ctx.auto = true; // continuous story: lines advance by themselves
-    UI.setBg('bg_station_morning');
-    skipButton(ctx, 'l1learn');
+    UI.setBg('bg_level1_bright', { tint: 'faded' });
     const w = UI.world();
     const rail = UI.el('img'); rail.src = 'assets/props/l1_platform_rail.webp'; rail.alt = '';
     rail.style.cssText = 'position:absolute;left:340px;top:455px;width:760px;z-index:1;';
@@ -33,68 +26,34 @@
     Cast.add('ira', { char: 'ira', pose: 'idle', x: 180, bottom: 110, h: 430 }); Cast.idle('ira');
     await ctx.play(Anim.from(row.children, { y: 40, opacity: 0, stagger: 0.12, duration: 0.5 }));
 
-    await ctx.say('Narrator', 'Welcome to the bot charging station.');
-    await ctx.play(Cast.pose('ira', 'idle'));
-    await ctx.say('Narrator', 'Today, Ira is in charge.');
-    // 3: labels light up
+    // 1: Ira at the console
+    await ctx.say('Ira', 'Welcome to the bot charging station. Today, I’m in charge!', { actor: 'ira', pose: 'talk' });
+    await ctx.say('Ira', 'The bots need charging.', { actor: 'ira' });
+    // 2: a label lights up above each battery
     slots.forEach((s, i) => Parts.setLabel(s, fr[i][0], fr[i][1]));
-    await ctx.say('Ira', 'Each slot shows its charge. I will make sure every bot gets the right charge.', { actor: 'ira', pose: 'talk' });
-    // 4: bots roll in
+    await ctx.say('Ira', 'Each slot shows its charge.', { actor: 'ira', pose: 'point' });
+    // 3: a line of bots rolls in, every screen says "Need 1/2"
     const crew = ['zip', 'bolt', 'pixel', 'spark', 'nova'];
     crew.forEach((c, i) => { Cast.add('q' + i, { char: c, pose: 'neutral', x: 1240 + i * 30, bottom: 80, h: 170, cls: 'small' }); Cast.screen('q' + i, UI.frac(1, 2)); });
     BSC.Audio.play('roll');
     await ctx.play(gsap.to(crew.map((_, i) => Cast.get('q' + i)), { left: (i) => 760 + i * 92, duration: Anim.reduced ? 0.01 : 1, stagger: 0.12, ease: 'power2.out' }));
-    await ctx.say('Bot', 'Beep! I need half a charge. Everyone here needs 1/2!');
-    // 5: Byte scans
-    Cast.add('byte', { char: 'byte', pose: 'scan', x: 1150, bottom: 420, h: 170 });
-    await ctx.play(Cast.enter('byte', 'right')); Cast.idle('byte');
-    slots.forEach((s) => s.classList.add('demo'));
-    await ctx.say('Byte', 'Scanning!', { actor: 'byte' });
-    slots.forEach((s) => s.classList.remove('demo'));
-    // 6: crosses
-    slots.slice(1).forEach((s) => Parts.badge(s, 'bad'));
-    await ctx.say('Byte', '1/2 matches. The other numbers are bigger. Too much charge!', { actor: 'byte', pose: 'point' });
-    // 7–8: everyone queues at slot 1, other slots dim
-    await ctx.play(Cast.pose('byte', 'whistle'));
+    await ctx.say('Bot', 'Beep! I need half a charge.', { actor: 'q0' });
+    await ctx.say('Bot', 'I need half a charge too.', { actor: 'q1' });
+    // 4: every bot lines up at the 1/2 slot; the line grows, the other slots sit empty, Byte is worried
     slots.slice(1).forEach((s) => { s.style.opacity = 0.45; });
     const bar = UI.el('img'); bar.src = 'assets/props/l1_queue_barrier.webp'; bar.alt = ''; bar.style.cssText = 'position:absolute;left:390px;top:560px;width:420px;z-index:4;';
     w.appendChild(bar);
     await ctx.play(gsap.to(crew.map((_, i) => Cast.get('q' + i)), { left: (i) => 440 + i * 70, duration: Anim.reduced ? 0.01 : 0.9, stagger: 0.08 }));
-    await ctx.say('Byte', 'Bots! Line up at the 1/2 slot.', { actor: 'byte' });
     ['gizmo', 'rivet'].forEach((c, k) => { const i = crew.length + k; Cast.add('q' + i, { char: c, pose: 'neutral', x: 1300, bottom: 80, h: 170, cls: 'small' }); Cast.screen('q' + i, UI.frac(1, 2)); });
-    await ctx.play(gsap.to([Cast.get('q5'), Cast.get('q6')], { left: (i) => 790 + i * 70, duration: Anim.reduced ? 0.01 : 0.9, stagger: 0.15 }));
-    await ctx.say('Narrator', 'The line gets longer…');
-    await ctx.say('Bot', 'Beep… still waiting.');
-    // 9: Ira wonders
+    BSC.Audio.play('roll');
+    const late = gsap.to([Cast.get('q5'), Cast.get('q6')], { left: (i) => 790 + i * 70, duration: Anim.reduced ? 0.01 : 0.9, stagger: 0.15 });
+    Cast.add('byte', { char: 'byte', pose: 'worried', x: 1150, bottom: 420, h: 170 });
+    await ctx.play(Cast.enter('byte', 'right')); Cast.idle('byte');
+    await ctx.play(late);
     await ctx.play(Cast.pose('ira', 'think'));
-    await ctx.say('Ira', 'These batteries look alike. Are they the same?', { actor: 'ira' });
-    await waitButton(ctx, '📡 Call Professor Duster');
-    // 10: Duster appears
-    await ctx.play(gsap.to([...Array(7).keys()].map((i) => Cast.get('q' + i)).filter(Boolean), { opacity: 0, duration: 0.4 }));
-    bar.remove(); slots.forEach((s) => { s.style.opacity = 1; Parts.badge(s, null); });
-    Cast.exit('byte');
-    Cast.add('duster', { char: 'duster', pose: 'explain', x: 1130, bottom: 100, h: 420 });
-    await ctx.play(Cast.enter('duster', 'holo')); Cast.idle('duster');
-    await ctx.say('Ira', 'Professor, one slot is getting crowded. Is there any other way to charge the bots?', { actor: 'ira', pose: 'talk' });
-    slots[0].classList.add('demo'); slots[1].classList.add('demo');
-    await ctx.say('Duster', 'Look carefully. Do 1/2 and 2/4 cover the same portion?', { actor: 'duster', pose: 'point' });
-    // 11: overlay proof
-    await waitButton(ctx, 'Put 2/4 on top of 1/2');
-    await ctx.lock(async () => {
-      const copy = Battery.create({ shape: 'circle', d: 4, n: 2, width: 150 }); copy.classList.add('see');
-      const a = slots[1]._batt.getBoundingClientRect(), b = slots[0]._batt.getBoundingClientRect(), s = document.getElementById('stage').getBoundingClientRect(), k = UI.scale();
-      copy.style.cssText = `position:absolute;z-index:20;width:150px;left:${(a.left - s.left) / k}px;top:${(a.top - s.top) / k}px`;
-      w.appendChild(copy);
-      await ctx.play(Anim.to(copy, { left: (b.left - s.left) / k, top: (b.top - s.top) / k - 60, duration: 0.7, ease: 'power2.inOut' }));
-      await ctx.play(Anim.to(copy, { top: (b.top - s.top) / k, duration: 0.45, ease: 'bounce.out' }));
-      Parts.badge(slots[0], 'ok'); BSC.Audio.play('ok');
-    });
-    await ctx.say('Duster', 'See? The charged parts match exactly.', { actor: 'duster' });
-    // 12
-    Cast.add('byte', { char: 'byte', pose: 'confused', x: 330, bottom: 440, h: 150 }); Cast.enter('byte', 'up');
-    await ctx.say('Duster', 'Different numbers. Same charge.', { actor: 'duster', pose: 'explain' });
-    await ctx.say('Byte', 'But the numbers are bigger!', { actor: 'byte' });
-    await ctx.say('Duster', "Let's find out why. Come to my bench!", { actor: 'duster', pose: 'point', next: 'Start learning' });
+    // Ira points out the empty slots: they hold 1/2 too
+    slots.slice(1).forEach((s) => { s.style.opacity = 1; s.classList.add('demo'); });
+    await ctx.say('Ira', 'The other slots have a 1/2 charge too. Let’s move some bots there!', { actor: 'ira', pose: 'point' });
     ctx.next();
   };
 
@@ -102,7 +61,6 @@
   BSC.Scenes.shopIntro = async function (ctx) {
     ctx.auto = true; // continuous story: lines advance by themselves
     UI.setBg('bg_battery_shop');
-    skipButton(ctx, 'l2learn');
     const w = UI.world();
     const shelf = UI.el('div'); shelf.style.cssText = 'position:absolute;left:250px;top:250px;width:640px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-items:end;z-index:2;';
     [2, 3, 4, 6].forEach((d) => {
@@ -133,9 +91,8 @@
     shelf.classList.add('demo');
     await ctx.say('Ira', 'Wait! These batteries have bigger pieces.', { actor: 'ira' });
     await ctx.play(Cast.pose('ira', 'think'));
-    await ctx.say('Ira', 'But which one matches 8/12? Let’s ask Professor Duster.', { actor: 'ira' });
+    await ctx.say('Ira', 'But which one matches 8/12? Let’s see.', { actor: 'ira' });
     shelf.classList.remove('demo');
-    await waitButton(ctx, '📡 Call Professor Duster');
     ctx.next();
   };
 
@@ -143,7 +100,6 @@
   BSC.Scenes.gateIntro = async function (ctx) {
     ctx.auto = true; // continuous story: lines advance by themselves
     UI.setBg('bg_delivery_gate');
-    skipButton(ctx, 'l3learn');
     const w = UI.world();
     const crate = UI.el('div', 'crate', 'GREENHOUSE<small>Long trip · fragile seedlings</small>'); crate.style.left = '525px'; crate.style.top = '300px';
     w.appendChild(crate);
@@ -154,12 +110,10 @@
     BSC.Audio.play('roll');
     await ctx.play(gsap.timeline().add(Cast.enter('zip', 'left')).add(Cast.enter('bolt', 'right'), '<'));
     Cast.add('ira', { char: 'ira', pose: 'talk', x: 130, bottom: 110, h: 420 }); Cast.enter('ira', 'left');
-    await ctx.say('Ira', 'The bot with more charge takes the trip. If they have the same charge, both go!', { actor: 'ira' });
-    await ctx.play(Cast.pose('ira', 'handover'));
-    Cast.add('byte', { char: 'byte', pose: 'worried', x: 1150, bottom: 300, h: 180 }); await ctx.play(Cast.enter('byte', 'right')); Cast.idle('byte');
-    await ctx.say('Ira', 'Byte, you’re sending the bots today.', { actor: 'ira' });
-    await ctx.say('Byte', 'Me? Oh no. Numbers confuse me!', { actor: 'byte' });
-    await ctx.play(Cast.pose('byte', 'point'));
+    await ctx.say('Ira', 'The bot with more charge takes the trip.', { actor: 'ira' });
+    await ctx.say('Ira', 'If they have the same charge, both take the trip!', { actor: 'ira' });
+    // Byte turns to the child
+    Cast.add('byte', { char: 'byte', pose: 'point', x: 1150, bottom: 300, h: 180 }); await ctx.play(Cast.enter('byte', 'right')); Cast.idle('byte');
     await ctx.say('Byte', 'Can you help me pick the right bot?', { actor: 'byte' });
     await waitButton(ctx, 'Help Byte');
     ctx.next();
@@ -175,12 +129,10 @@
     w.appendChild(row);
     ['zip', 'pixel', 'nova', 'spark'].forEach((c, i) => { Cast.add('f' + i, { char: c, pose: 'happy', x: 445 + i * 177, bottom: 120, h: 150, cls: 'small' }); });
     await ctx.play(Anim.from(row.querySelectorAll('.cell.on'), { opacity: 0.2, duration: 0.5, stagger: 0.05 }));
-    await ctx.say('Narrator', 'Evening. Every slot is busy and the station runs smoothly.');
+    await ctx.say('Narrator', 'The station is running smoothly.');
     Cast.add('ira', { char: 'ira', pose: 'cheer', x: 170, bottom: 100, h: 420 }); Cast.enter('ira', 'left');
-    Cast.add('duster', { char: 'duster', pose: 'wave', x: 1140, bottom: 100, h: 400 }); await ctx.play(Cast.enter('duster', 'holo')); Cast.idle('duster');
     Cast.add('byte', { char: 'byte', pose: 'cheer', x: 990, bottom: 360, h: 170 }); Cast.enter('byte', 'up'); Cast.idle('byte');
-    await ctx.say('Duster', 'Great work today!', { actor: 'duster' });
-    await ctx.say('Byte', 'Bigger numbers don’t always mean more charge. I get it now!', { actor: 'byte' });
+    await ctx.say('Ira', 'Great work today!', { actor: 'ira' });
     await ctx.play(Cast.pose('ira', 'wave'));
     await ctx.say('Ira', 'Thank you for helping us. See you next time!', { actor: 'ira', next: 'Finish' });
     // End card
@@ -202,5 +154,5 @@
     UI.actions([{ label: 'Play again', variant: 'secondary', onClick: () => Game.go('levels') }, { label: 'Back to title', variant: 'primary', onClick: () => Game.go('title') }]);
   };
 
-  BSC.Story = { skipButton, waitButton };
+  BSC.Story = { waitButton };
 })(window.BSC = window.BSC || {});

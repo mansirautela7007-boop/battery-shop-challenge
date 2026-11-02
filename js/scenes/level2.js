@@ -17,7 +17,7 @@
   // ------------------------------------------------------------ Level 2 Learn
   BSC.Scenes.l2learn = async function (ctx, params) {
     UI.setBg(null, { tint: 'plain' });
-    Learn.duster();
+    Learn.teacher();
     const steps = [
       // Beats 1–7: the Merger on 8/12
       async (ctx) => {
@@ -25,7 +25,7 @@
         const box = Learn.big(r, { shape: 'rect', d: 12, n: 8, width: 300 });
         const tb = Learn.toolbox(r, 'The Merger', 'tool_merger', ['÷2']);
         const shop = UI.el('div'); shop.style.cssText = 'display:grid;justify-items:center;gap:6px;min-width:250px;'; r.appendChild(shop);
-        await ctx.say('Duster', 'Let’s join small pieces into big ones. Tap ÷2.', { wait: false, actor: 'duster', pose: 'point' });
+        await ctx.say('Ira', 'Let’s join the small pieces into bigger ones. Tap ÷2.', { wait: false, actor: 'ira', pose: 'point' });
         let stop = Parts.tapHint(tb._btns[0]);
         await ctx.tap(tb._btns[0]); stop();
         await ctx.lock(() => BSC.L1Anim.joinAnim(ctx, box._b, { d: 6, n: 4 }));
@@ -33,25 +33,26 @@
         shop.innerHTML = '<span class="chip">Shop battery: 6 pieces</span>';
         const s6 = Battery.create({ shape: 'rect', d: 6, n: 4, width: 220 }); shop.appendChild(s6);
         await ctx.play(Anim.from(shop, { x: 160, opacity: 0, duration: 0.5 })); Parts.badge(shop, 'ok'); BSC.Audio.play('ok');
-        await ctx.say('Duster', 'Same charge, bigger pieces. 4/6 matches a shop battery! But can the pieces get even bigger?', { wait: false, actor: 'duster' });
+        await ctx.say('Ira', 'The pieces are bigger now, but the charge is the same. 4/6 matches! But can the pieces get even bigger?', { wait: false, actor: 'ira' });
         stop = Parts.tapHint(tb._btns[0]);
         await ctx.tap(tb._btns[0]); stop();
         await ctx.lock(() => BSC.L1Anim.joinAnim(ctx, box._b, { d: 3, n: 2 }));
         Learn.relabel(box, 2, 3);
         // ÷2 and ÷3 both fail on 2/3
         const t3 = UI.el('button', 'tool', '÷3'); t3.type = 'button'; tb._btns[0].after(t3);
-        await ctx.say('Duster', 'Even bigger pieces! Can we join again? Try ÷2 or ÷3.', { wait: false, actor: 'duster' });
+        await ctx.say('Ira', 'Look! The pieces are even bigger now. Can we join them again? Try ÷2 or ÷3.', { wait: false, actor: 'ira' });
         const k = await Promise.race([ctx.tap(tb._btns[0]).then(() => 2), ctx.tap(t3).then(() => 3)]);
         [tb._btns[0], t3].forEach((b) => { b.classList.add('red'); Anim.wiggle(b); });
-        UI.feedback('bad', `${F.divisionLine(2, k)} · ${F.divisionLine(3, k)}: ${k} doesn’t divide both. Nothing bigger than 1 divides both 2 and 3.`);
-        await ctx.wait(1.2);
+        UI.feedback('bad', `No. No number can divide both 2 and 3. (${F.divisionLine(2, k)} · ${F.divisionLine(3, k)})`);
+        ctx.say('Ira', 'No. No number can divide both 2 and 3.', { wait: false, actor: 'ira' });
+        await ctx.wait(2.4);
         tb._btns[0].disabled = t3.disabled = true;
         const title = UI.el('div', 'title-card', 'Simplest form'); a.prepend(title); Anim.pop(title);
         shop.innerHTML = '<span class="chip">Shop battery: 3 pieces</span>';
         shop.appendChild(Battery.create({ shape: 'rect', d: 3, n: 2, width: 220 })); Parts.badge(shop, 'ok');
         UI.feedback('ok', '2/3 is the simplest form of 8/12: the biggest pieces, the same charge.');
-        await ctx.say('Duster', 'This is the simplest form: the biggest pieces with the same charge.', { actor: 'duster', pose: 'explain' });
-        await ctx.say('Ira', 'The shop has 2/3! That’s the battery our bot needs.');
+        await ctx.say('Ira', 'This is called the simplest form. It has the biggest pieces, and the charge is still the same.', { actor: 'ira', pose: 'talk' });
+        await ctx.say('Ira', 'The shop has 2/3!', { actor: 'ira' });
       },
       // Beats 8–10: HCF in one step
       async (ctx) => {
@@ -61,7 +62,7 @@
         list.innerHTML = `<div style="font-family:var(--f-display);font-weight:800;color:var(--cyan);letter-spacing:.06em;text-transform:uppercase;font-size:16px">Numbers that divide…</div>${line(8)}${line(12)}<div id="hcf" style="font-family:var(--f-display);font-weight:800;font-size:30px;text-align:center;min-height:44px"></div>`;
         r.appendChild(list);
         const box = Learn.big(r, { shape: 'rect', d: 12, n: 8, width: 300 });
-        await ctx.say('Duster', 'Can we do it in one step? Look at the numbers that divide both 8 and 12.', { actor: 'duster', pose: 'point' });
+        await ctx.say('Ira', 'Can we do it in one step?', { actor: 'ira', pose: 'point' });
         await ctx.lock(async () => {
           const common = [...list.querySelectorAll('.dv')].filter((s) => +s.dataset.k > 1 && 8 % s.dataset.k === 0 && 12 % s.dataset.k === 0);
           await ctx.play(Anim.to(common, { backgroundColor: '#ffb547', color: '#0b1030', duration: 0.3, stagger: 0.12 }));
@@ -70,16 +71,17 @@
           document.getElementById('hcf').innerHTML = 'HCF = 4<div style="font-size:16px;color:var(--muted)">Highest Common Factor</div>';
           Anim.pop(document.getElementById('hcf'));
         });
-        await ctx.say('Duster', '2 and 4 divide both. 4 is the biggest, so it’s called the HCF: the Highest Common Factor.', { actor: 'duster' });
+        await ctx.say('Ira', 'Both 2 and 4 divide 8 and 12. The biggest one is 4.', { actor: 'ira' });
+        await ctx.say('Ira', 'The biggest number that divides both is called the HCF.', { actor: 'ira', pose: 'talk' });
         const tb = Learn.toolbox(r, 'One step', null, ['÷4']);
         const stop = Parts.tapHint(tb._btns[0]);
-        await ctx.say('Duster', 'Tap ÷4.', { wait: false, actor: 'duster' });
+        await ctx.say('Ira', 'Tap ÷4.', { wait: false, actor: 'ira' });
         await ctx.tap(tb._btns[0]); stop(); tb._btns[0].disabled = true;
         await ctx.lock(() => BSC.L1Anim.joinAnim(ctx, box._b, { d: 3, n: 2 }));
         Learn.relabel(box, 2, 3);
         const eq = UI.el('div', '', Parts.chain([{ n: 8, d: 12 }, { n: 4, d: 6, op: '÷2' }, { n: 2, d: 3, op: '÷2' }]) + `<div class="chain" style="font-size:24px;margin-top:6px"><span class="eq">÷2 then ÷2 is the same as ÷4 (2 × 2 = 4)</span></div>`);
         a.appendChild(eq); Anim.pop(eq);
-        await ctx.say('Duster', '÷4. One step. Simplest form!', { actor: 'duster' });
+        await ctx.say('Ira', 'We divided by 4 and got the simplest form in one step!', { actor: 'ira' });
       },
       // Beat 11: shading demo
       async (ctx) => {
@@ -89,13 +91,13 @@
         const right = Learn.big(r, { shape: 'rect', d: 3, n: 0, cols: 3, width: 260 }, false);
         right._lab.innerHTML = 'empty 3-piece';
         const barB = chargeBar(0, 'shaded'); r.appendChild(barB);
-        await ctx.say('Duster', 'Now let’s charge an empty battery with the same charge. Watch me shade 2 of the 3 pieces.', { actor: 'duster', pose: 'point' });
+        await ctx.say('Ira', 'Now let’s charge an empty battery. I shade 2 of the 3 pieces.', { actor: 'ira', pose: 'point' });
         await ctx.lock(async () => {
           for (let i = 1; i <= 2; i++) { Battery.set(right._b, { on: [...Array(i).keys()] }, { anim: 'fill' }); BSC.Audio.play('tap'); await ctx.play(barB._set((i / 3))); await ctx.wait(0.3); }
           Learn.relabel(right, 2, 3);
         });
         UI.feedback('ok', 'The charge bars are level: 8/12 = 2/3.');
-        await ctx.say('Duster', 'Shade 2 of 3 pieces: the same charge as 8/12. See the bars?', { actor: 'duster', pose: 'explain' });
+        await ctx.say('Ira', 'The charge is the same!', { actor: 'ira', pose: 'talk' });
       },
       // Beats 12–17: guided try on 6/8
       async (ctx) => {
@@ -104,14 +106,14 @@
         const box = Learn.big(r, { shape: 'rect', d: 8, n: 6, width: 260 });
         const tb = Learn.toolbox(r, 'The Merger', null, ['÷2', '÷3', '÷4']);
         const host = UI.el('div'); r.appendChild(host);
-        await ctx.say('Duster', 'Your turn! A bot orders 6/8. Find the biggest number that divides both 6 and 8.', { wait: false, actor: 'duster', pose: 'point' });
+        await ctx.say('Ira', 'Now it’s your turn. Find the biggest number that divides both.', { wait: false, actor: 'ira', pose: 'point' });
         let wrongs = 0;
         UI.hud.setHint(() => UI.feedback('hint', `Numbers that divide 6: ${F.divisors(6).filter((k) => k > 1).join(', ')}. Numbers that divide 8: ${F.divisors(8).filter((k) => k > 1).join(', ')}. Which is in both lists?`));
         await new Promise((resolve) => tb._btns.forEach((b, i) => ctx.on(b, 'click', () => {
           const k = i + 2;
           if (!F.dividesBoth(k, [6, 8])) {
             wrongs++; b.classList.add('red'); Anim.wiggle(b); BSC.Audio.play('wrong');
-            UI.feedback('bad', `That doesn’t divide both numbers: ${F.divisionLine(6, k)} ${6 % k ? '✗' : '✓'} · ${F.divisionLine(8, k)} ${8 % k ? '✗' : '✓'}`);
+            UI.feedback('bad', `That number does not divide both. Try another one. ${F.divisionLine(6, k)} ${6 % k ? '✗' : '✓'} · ${F.divisionLine(8, k)} ${8 % k ? '✗' : '✓'}`);
             setTimeout(() => b.classList.remove('red'), 900);
             return;
           }
@@ -121,7 +123,7 @@
         await ctx.lock(() => BSC.L1Anim.joinAnim(ctx, box._b, { d: 4, n: 3 }));
         tb.remove();
         box._lab.innerHTML = '?';
-        await ctx.say('Duster', 'What is the simplest form?', { wait: false, actor: 'duster' });
+        await ctx.say('Ira', 'What is the simplest form?', { wait: false, actor: 'ira' });
         await Learn.ask(ctx, host, [3, 4], { batt: box._b, label: 'Simplest form' });
         Learn.relabel(box, 3, 4); host.innerHTML = '';
         // shade an empty 4-piece battery to match
@@ -130,7 +132,7 @@
         const bars = UI.el('div'); bars.style.cssText = 'display:flex;gap:16px;margin-top:8px;';
         const bA = chargeBar(6 / 8, 'bot'), bB = chargeBar(0, 'yours'); bars.append(bA, bB); host.appendChild(bars);
         bars.style.transform = 'scale(.7)'; bars.style.transformOrigin = '50% 0'; bars.style.marginBottom = '-60px';
-        await ctx.say('Duster', 'Now charge an empty 4-piece battery to match. Tap pieces to shade them, then press Check.', { wait: false, actor: 'duster' });
+        await ctx.say('Ira', 'Now shade the battery to match.', { wait: false, actor: 'ira' });
         const shaded = new Set();
         shadeBox._b.addEventListener('click', (e) => {
           const c = e.target.closest('.cell'); if (!c || Game.busy) return;
@@ -142,19 +144,18 @@
         await new Promise((resolve) => {
           const chk = UI.button('Check', { variant: 'primary', onClick: () => {
             if (shaded.size === 3) { resolve(); return; }
-            UI.feedback('bad', shaded.size > 3 ? 'Too much! Match the bot’s charge: the bars should be level.' : 'Too little! Match the bot’s charge: the bars should be level.');
+            UI.feedback('bad', shaded.size > 3 ? 'That is too much. Match the bot’s charge.' : 'That is too little. Match the bot’s charge.');
           } });
           UI.actions([chk]);
         });
         UI.actions([]); UI.hud.setHint(null);
         Learn.relabel(shadeBox, 3, 4); Parts.badge(shadeBox, 'ok');
-        UI.feedback('ok', 'Yes! 6/8 = 3/4. The bars are level.');
-        await ctx.say('Duster', 'Yes! 6/8 = 3/4.', { actor: 'duster' });
+        UI.feedback('ok', 'Well done! 6/8 is the same as 3/4. The bars are level.');
+        await ctx.say('Ira', 'Well done! 6/8 is the same as 3/4.', { actor: 'ira' });
       },
       async (ctx) => {
         Learn.area().innerHTML = '';
-        Cast.exit('duster', 'holo');
-        Cast.add('ira', { char: 'ira', pose: 'talk', x: 560, bottom: 150, h: 400 }); Cast.enter('ira', 'up');
+        Learn.teacher('talk', { x: 560, bottom: 150, h: 400 }); // Ira steps to the centre for the hand-off
         await ctx.say('Ira', 'Orders are waiting! Steer each bot through a gate that divides its top and bottom numbers, then pick the battery in the shop.', { actor: 'ira', next: 'Start' });
       },
     ];
@@ -188,7 +189,8 @@
     UI.world().innerHTML = ''; UI.feedback(null);
     const total = Object.values(S.stars).reduce((a, b) => a + b, 0);
     Cast.add('byte', { char: 'byte', pose: 'cheer', x: 640, bottom: 200, h: 260 }); Cast.enter('byte', 'up'); Cast.idle('byte');
-    await ctx.say('Byte', `Different numbers. Same charge. Biggest pieces! You earned ${total} of 24 stars.`, { actor: 'byte' });
+    UI.feedback('ok', `You earned ${total} of 24 stars.`);
+    await ctx.say('Byte', 'Different numbers. Same charge. Biggest pieces!', { actor: 'byte' });
     await ctx.say('Ira', 'Every bot left with its battery. Level 2 complete!', { next: 'Continue' });
     await BSC.levelDone(ctx, 2);
   };
@@ -231,7 +233,7 @@
       // --- side panel ---
       const side = UI.el('div', 'side-panel'); w.appendChild(side);
       side.innerHTML = `<div class="label-plate" style="font-size:22px">Order: ${UI.frac(L.order[0], L.order[1])}</div>`;
-      const batt = Battery.create({ shape: L.shape, d: cur[1], n: cur[0], width: L.shape === 'rect' || L.shape === 'diamond' ? 230 : 170 });
+      const batt = Battery.create({ shape: L.shape, d: cur[1], n: cur[0], width: Battery.wide(L.shape) ? 230 : 170 });
       side.appendChild(batt);
       const now = UI.el('div', 'route'); side.appendChild(now);
       const rec = UI.el('div', 'record-card');
@@ -252,9 +254,11 @@
 
       // --- talk ---
       const [o1, o2] = L.order;
-      if (L.nudge) ctx.say('Ira', `This bot needs ${o1}/${o2}, but the shop only sells bigger pieces. Steer through a gate that divides the top AND the bottom, then go to the shop.`, { wait: false });
-      else if (L.newShape) ctx.say('Ira', `New batteries! This bot needs ${o1}/${o2}. Byte used ${L.record} gate${L.record > 1 ? 's' : ''}. Can you beat him?`, { wait: false });
-      else ctx.say(L.bot[0].toUpperCase() + L.bot.slice(1), `I need ${o1}/${o2}! Byte used ${L.record} gate${L.record > 1 ? 's' : ''}. Can you beat him?`, { wait: false });
+      const botName = L.bot[0].toUpperCase() + L.bot.slice(1), beat = `Byte used ${L.record} gate${L.record > 1 ? 's' : ''}. Can you beat him?`;
+      const NEW = { circle: 'Round ones this time.', square: 'Square ones now.', hexagon: 'Hexagons this time.', diamond: 'Diamonds this time.', triangle: 'Triangles this time.' };
+      BSC.sayLines(ctx, L.nudge ? [[botName, `I need ${o1}/${o2}, please!`], ['Ira', 'The shop only sells batteries with bigger pieces. Steer through a gate. It must divide the top and the bottom.']]
+        : L.newShape ? [['Ira', `New batteries! ${NEW[L.shape] || ''}`.trim()], [botName, `I need ${o1}/${o2}! ${beat}`]]
+        : [[botName, `I need ${o1}/${o2}! ${beat}`]], () => !done && !passed && !bumps);
       if (L.nudge) setTimeout(() => { if (ctx.alive) { const stop = Parts.tapHint(dpad.querySelector('[data-d="right"]')); setTimeout(stop, 3500); } }, 500);
 
       const showHint = (force) => {
@@ -267,7 +271,7 @@
         paint();
       };
       UI.hud.setHint(() => showHint());
-      const mistake = () => { mistakes++; if (mistakes === 2 && hintRung < 3) showHint(3); if (mistakes === 3) { ctx.say('Duster', 'The glowing gates divide both numbers. Which is the biggest?', { wait: false }); } paint(); };
+      const mistake = () => { mistakes++; if (mistakes === 2 && hintRung < 3) showHint(3); if (mistakes === 3) { ctx.say('Ira', 'The glowing gates divide both numbers. Which is the biggest?', { wait: false }); } paint(); };
 
       // --- movement ---
       const key = (p) => `${p[0]},${p[1]}`;
@@ -313,7 +317,7 @@
             await ctx.play(gsap.timeline().to(token, { left: (gx + px) / 2, top: (gy + py) / 2, duration: 0.12 }).to(token, { left: px, top: py, duration: 0.25, ease: 'back.out(3)' }));
           });
           const bad = cur[0] % k ? cur[0] : cur[1], good = cur[0] % k ? cur[1] : cur[0];
-          UI.feedback('bad', `Locked! ${k} fits ${good} but not ${bad}: ${F.divisionLine(cur[0], k)} · ${F.divisionLine(cur[1], k)}. A gate must divide both. (−1 star)`);
+          UI.feedback('bad', `Oops! Try again. ${k} fits ${good}, but not ${bad}. A gate must divide both. (${F.divisionLine(cur[0], k)} · ${F.divisionLine(cur[1], k)}, −1 star)`);
           setTimeout(() => g.classList.remove('locked'), 900);
           mistake(); return;
         }
@@ -328,15 +332,15 @@
         const panel = UI.el('div', 'panel'); panel.style.cssText = 'left:120px;top:150px;width:720px;z-index:20;display:grid;justify-items:center;gap:8px;';
         panel.innerHTML = `<h3>The ÷${k} gate fits! ${UI.frac(cur[0], cur[1], 'md')} ÷ ${k} = ?</h3>`;
         const host = UI.el('div'); panel.appendChild(host); w.appendChild(panel); Anim.pop(panel);
-        ctx.say('Duster', `Divide the top by ${k}, then the bottom by ${k}.`, { wait: false });
+        ctx.say('Ira', `The ÷${k} gate fits! Now write the new fraction. Divide the top by ${k}, then the bottom by ${k}.`, { wait: false });
         let wrong = 0;
         BSC.__target = target; // test hook (read-only)
         await new Promise((res) => UI.entry(host, { max: 12, label: 'Write the new fraction', onCheck: (t, b, api) => {
           if (t === target[0] && b === target[1]) { api.done(); res(); return; }
           wrong++; const which = t !== target[0] ? 0 : 1, x = which ? cur[1] : cur[0];
           api.mark(which);
-          if (wrong === 1) UI.feedback('bad', `Check the ${which ? 'bottom' : 'top'}: what is ${x} ÷ ${k}?`);
-          else if (wrong === 2) UI.feedback('hint', `Every ${k} pieces join into 1. ${x} pieces in groups of ${k} make how many groups?`);
+          if (wrong === 1) UI.feedback('bad', `Oops! Try again. Check the ${which ? 'bottom' : 'top'}: what is ${x} ÷ ${k}?`);
+          else if (wrong === 2) UI.feedback('hint', `Hint: Each group of ${k} ${L.shape === 'circle' ? 'slices' : 'rows'} joins into one. Count the pieces after joining.`);
           else UI.feedback('hint', `${x} ÷ ${k} = ${x / k}`);
           setTimeout(() => api.clear(which), 600);
         } }));
@@ -346,7 +350,7 @@
         panel.remove(); UI.actions([]);
         await ctx.lock(() => BSC.L1Anim.joinAnim(ctx, batt, { d: cur[1], n: cur[0] }));
         UI.feedback('ok', `Yes! ${cur[0]}/${cur[1]}. The pieces got bigger.`);
-        ctx.say('Duster', F.isSimplest(cur) ? `${cur[0]}/${cur[1]}: nothing else divides both. Go to the shop!` : `${cur[0]}/${cur[1]}. Same charge, bigger pieces. Can they get bigger still?`, { wait: false });
+        ctx.say('Ira', `Yes! ${cur[0]}/${cur[1]}. The pieces got bigger.` + (F.isSimplest(cur) ? ' Nothing else divides both. Go to the shop!' : ' Can they get bigger still?'), { wait: false });
         busyPanel = false; paint();
         // dead end?
         if (!F.isSimplest(cur) && !L.gates.some((kk, j) => !used.has(j) && F.dividesBoth(kk, cur))) deadEnd();
@@ -356,7 +360,7 @@
         const panel = UI.el('div', 'panel'); panel.style.cssText = 'left:120px;top:170px;width:720px;z-index:20;display:grid;justify-items:center;gap:10px;border-color:var(--warn-ink);';
         panel.innerHTML = `<h3 style="color:var(--warn-ink)">No gate left fits ${UI.frac(cur[0], cur[1], 'in')}</h3><div style="font-size:19px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center">${L.gates.map((k, j) => used.has(j) ? '' : `<span>÷${k}: ${cur[0]} ${cur[0] % k ? '✗' : '✓'} · ${cur[1]} ${cur[1] % k ? '✗' : '✓'}</span>`).join('')}</div><p style="margin:0;font-size:19px;color:var(--muted)">Tip: a bigger gate first can save you a step.</p>`;
         w.appendChild(panel); Anim.pop(panel);
-        ctx.say('Duster', 'No gate left fits. Undo your last gate and try a bigger one first.', { wait: false });
+        ctx.say('Ira', 'No gate left fits. Press Start over and try a bigger gate first.', { wait: false });
         UI.actions([
           { label: 'Start over', variant: 'secondary', onClick: () => { panel.remove(); restore(history[0], true); } },
           { label: 'Undo last gate', variant: 'primary', onClick: () => { panel.remove(); restore(history[history.length - 1]); } },
@@ -370,7 +374,7 @@
       async function atShop() {
         if (!F.isSimplest(cur)) {
           const c = F.commonFactors(cur)[0];
-          UI.feedback('warn', `Same charge, but ${cur[0]} and ${cur[1]} can still both be divided by ${c}. Simplify first!`);
+          UI.feedback('warn', `Oops! Same charge, but ${cur[0]} and ${cur[1]} can still both be divided by ${c}. Simplify first.`);
           BSC.Audio.play('wrong'); mistake();
           await ctx.lock(async () => { pos = prev || Mz.start.slice(); await ctx.play(place()); });
           return;
@@ -382,7 +386,7 @@
         const opts = L.shelf.map(([a, b]) => {
           const o = UI.el('button'); o.type = 'button'; o.className = 'selectable'; o.style.cssText = 'position:relative;background:none;border:0;cursor:pointer;display:grid;justify-items:center;gap:0;padding:6px;border-radius:16px;';
           o.setAttribute('aria-label', `Battery ${a} over ${b}`);
-          o.appendChild(Battery.create({ shape: L.shape, d: b, n: a, width: L.shape === 'rect' || L.shape === 'diamond' ? 190 : 150 }));
+          o.appendChild(Battery.create({ shape: L.shape, d: b, n: a, width: Battery.wide(L.shape) ? 190 : 150 }));
           const cr = UI.el('img'); cr.src = 'assets/batteries/shelf_cradle.webp'; cr.alt = ''; cr.style.cssText = 'width:170px;margin-top:-14px'; o.appendChild(cr);
           o.appendChild(UI.el('div', 'label-plate', UI.frac(a, b)));
           shelf.appendChild(o); return o;
@@ -395,7 +399,7 @@
           if (Game.busy || done) return;
           const f = L.shelf[i];
           if (F.equal(f, cur)) { o.classList.add('is-ok'); Parts.badge(o, 'ok'); win(panel); }
-          else { o.classList.add('is-bad'); Anim.wiggle(o); BSC.Audio.play('wrong'); UI.feedback('bad', `That’s ${f[0]}/${f[1]}, a different charge from ${cur[0]}/${cur[1]}. Look at the pieces again.`); mistake(); setTimeout(() => o.classList.remove('is-bad'), 900); }
+          else { o.classList.add('is-bad'); Anim.wiggle(o); BSC.Audio.play('wrong'); UI.feedback('bad', `Oops! That’s a different charge (${f[0]}/${f[1]}, not ${cur[0]}/${cur[1]}). Look at the pieces again.`); mistake(); setTimeout(() => o.classList.remove('is-bad'), 900); }
         }));
       }
       function win(panel) {
@@ -407,7 +411,7 @@
         if (route.length > 1) extra = `<p style="margin:4px 0 0;font-size:19px">${route.map((r) => '÷' + r.k).join(' then ')} = ÷${route.reduce((p, r) => p * r.k, 1)}. One ÷${g} gate does the same job: ${g} is the HCF of ${L.order[0]} and ${L.order[1]}.</p>`;
         panel.innerHTML = `<h3 style="color:var(--ok)">Here’s your battery!</h3><div style="font-size:24px;font-weight:800">${UI.frac(L.order[0], L.order[1], 'md')} in simplest form is ${UI.frac(L.order[0] / g, L.order[1] / g, 'md')}</div><div class="stars" aria-label="${s} stars">${'★'.repeat(s)}<span class="off">${'★'.repeat(3 - s)}</span></div>${extra}`;
         Anim.pop(panel);
-        const msg = s === 3 ? (passed < L.record ? 'You beat my record!' : 'You matched my record!') : bumps ? 'The bumps cost you. Check before you steer!' : `Fewer gates next time? ${g} is the biggest gate that fits.`;
+        const msg = s === 3 ? (passed < L.record ? 'You beat my record!' : 'You matched my record!') : bumps ? `${passed === 1 ? 'One gate! ' : ''}But the bumps cost you. Check before you steer!` : `÷${g} is the biggest number that divides both. That’s the HCF!`;
         ctx.say('Byte', msg, { wait: false });
         UI.actions([
           { label: 'Try for 3 stars', variant: 'secondary', onClick: () => { playOrder(ctx, L, idx).then(resolve, reject); } },

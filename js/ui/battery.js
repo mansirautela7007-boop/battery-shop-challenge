@@ -1,8 +1,9 @@
 /* Battery renderer.
-   The casing is artwork (circle, square, triangle PNGs) or code (rectangle with a 2:1 window, rhombus).
+   The casing is artwork (circle, square, triangle, hexagon) or code (rectangle with a 2:1 window, rhombus).
    The mathematical region is ALWAYS our own exact geometry, inset inside the painted window,
    so equal parts are truly equal: grids for rectangles/squares, a parallelogram grid for the
-   rhombus, wedges for circles, and fan slices from the apex for triangles. */
+   rhombus, wedges for circles, fan slices from the apex for triangles, and an equal-area grid for
+   the hexagon (columns cut where the area is equal; rows split every vertical slice in the same ratio). */
 (function (BSC) {
   'use strict';
   const NS = 'http://www.w3.org/2000/svg';
@@ -15,8 +16,12 @@
     triangle: { img: 'assets/batteries/battery_triangle.webp', w: 900, h: 773, region: { type: 'fan', apex: [450.5, 178], left: [128, 694], right: [773, 694] } },
     rect: { code: 'rect', w: 900, h: 500, region: { type: 'grid', x: 125, y: 110, w: 650, h: 325 } },
     diamond: { code: 'diamond', w: 900, h: 600, region: { type: 'rhombus', L: [128, 330], T: [450, 144], B: [450, 516] } },
+    // flat-top hexagon window: centre, half-width to the side points, half-width of the flat top, half-height
+    hexagon: { img: 'assets/batteries/battery_hexagon.webp', w: 900, h: 496, region: { type: 'hex', cx: 449, cy: 287, hw: 351, tw: 182, hh: 140 } },
   };
-  const SHAPE_NAMES = { rect: 'rectangle', square: 'square', circle: 'circle', triangle: 'triangle', diamond: 'diamond (rhombus)' };
+  const SHAPE_NAMES = { rect: 'rectangle', square: 'square', circle: 'circle', triangle: 'triangle', diamond: 'diamond (rhombus)', hexagon: 'hexagon' };
+  /** Wide casings get a bigger display width than the round/tall ones. */
+  const wide = (shape) => shape === 'rect' || shape === 'diamond' || shape === 'hexagon';
 
   /** Choose a grid layout: columns = denominator ÷ HCF so equivalent fractions line up column for column. */
   function layout(d, n, cols) {
@@ -28,12 +33,28 @@
 
   // ---------- geometry helpers ----------
   const pt = (p) => `${p[0].toFixed(1)},${p[1].toFixed(1)}`;
+  // hexagon: s = distance from the left point; the height ramps up over a = hw - tw, stays flat, then ramps down.
+  const hexH = (R, s) => { const a = R.hw - R.tw, W = 2 * R.hw; return 2 * R.hh * Math.max(0, Math.min(1, s / a, (W - s) / a)); };
+  function hexS(R, u) { // s where the area to the left is u (0..1) of the whole hexagon
+    const a = R.hw - R.tw, W = 2 * R.hw, tri = R.hh * a, total = 2 * R.hh * (W - a), T = u * total;
+    if (T <= tri) return Math.sqrt((T * a) / R.hh);
+    if (T >= total - tri) return W - Math.sqrt(((total - T) * a) / R.hh);
+    return a + (T - tri) / (2 * R.hh);
+  }
+  const hexXY = (R, s, v) => [R.cx - R.hw + s, R.cy + (v - 0.5) * hexH(R, s)];
   function gridPoint(R, u, v) {
     if (R.type === 'grid') return [R.x + u * R.w, R.y + v * R.h];
+    if (R.type === 'hex') return hexXY(R, hexS(R, u), v);
     // rhombus: L + u(T-L) + v(B-L)
     return [R.L[0] + u * (R.T[0] - R.L[0]) + v * (R.B[0] - R.L[0]), R.L[1] + u * (R.T[1] - R.L[1]) + v * (R.B[1] - R.L[1])];
   }
-  const quad = (R, u0, v0, u1, v1) => [gridPoint(R, u0, v0), gridPoint(R, u1, v0), gridPoint(R, u1, v1), gridPoint(R, u0, v1)];
+  /** Points along a row line at height v from column u0 to u1 (the hexagon's rows bend at its corners). */
+  function edge(R, u0, u1, v) {
+    if (R.type !== 'hex') return [gridPoint(R, u0, v), gridPoint(R, u1, v)];
+    const s0 = hexS(R, u0), s1 = hexS(R, u1), a = R.hw - R.tw;
+    return [s0, ...[a, 2 * R.hw - a].filter((s) => s > s0 && s < s1), s1].map((s) => hexXY(R, s, v));
+  }
+  const quad = (R, u0, v0, u1, v1) => [...edge(R, u0, u1, v0), ...edge(R, u0, u1, v1).reverse()];
   function circlePoint(R, t, rr) { const a = -Math.PI / 2 + 2 * Math.PI * t; const r = rr == null ? R.r : rr; return [R.cx + r * Math.cos(a), R.cy + r * Math.sin(a)]; }
   function wedgePath(R, t0, t1) {
     if (t1 - t0 >= 0.99999) return `M${R.cx - R.r},${R.cy}a${R.r},${R.r} 0 1,0 ${2 * R.r},0a${R.r},${R.r} 0 1,0 ${-2 * R.r},0Z`;
@@ -69,10 +90,13 @@
       for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) {
         const i = c * rows + r; const q = quad(R, c / cols, r / rows, (c + 1) / cols, (r + 1) / rows);
         const ctr = gridPoint(R, (c + 0.5) / cols, (r + 0.5) / rows);
-        cells.push({ i, d: 'M' + q.map(pt).join('L') + 'Z', on: isOn(i), c: ctr, cw: R.type === 'grid' ? R.w / cols : 0, ch: R.type === 'grid' ? R.h / rows : 0 });
+        let cw = 0, ch = 0;
+        if (R.type === 'grid') { cw = R.w / cols; ch = R.h / rows; }
+        else if (R.type === 'hex') { const s = hexS(R, (c + 0.5) / cols); cw = hexS(R, (c + 1) / cols) - hexS(R, c / cols); ch = hexH(R, s) / rows; }
+        cells.push({ i, d: 'M' + q.map(pt).join('L') + 'Z', on: isOn(i), c: ctr, cw, ch });
       }
       for (let c = 1; c < cols; c++) { const u = c / cols; lines.push({ key: 'u' + u.toFixed(5), d: 'M' + pt(gridPoint(R, u, 0)) + 'L' + pt(gridPoint(R, u, 1)) }); }
-      for (let r = 1; r < rows; r++) { const v = r / rows; lines.push({ key: 'v' + v.toFixed(5), d: 'M' + pt(gridPoint(R, 0, v)) + 'L' + pt(gridPoint(R, 1, v)) }); }
+      for (let r = 1; r < rows; r++) { const v = r / rows; lines.push({ key: 'v' + v.toFixed(5), d: 'M' + edge(R, 0, 1, v).map(pt).join('L') }); }
     }
     cells.sort((a, b) => a.i - b.i);
     return { cells, lines };
@@ -186,5 +210,5 @@
     g.innerHTML = `<path class="ghost" d="${regionPath(R, v)}"/>`;
   }
 
-  BSC.Battery = { create, set, count, ghost, layout, CASINGS, SHAPE_NAMES, regionPath };
+  BSC.Battery = { create, set, count, ghost, layout, wide, CASINGS, SHAPE_NAMES, regionPath };
 })(window.BSC = window.BSC || {});

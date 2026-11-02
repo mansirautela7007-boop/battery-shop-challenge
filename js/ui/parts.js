@@ -5,14 +5,14 @@
 
   const Parts = {
     /** A charging slot: battery on top of the charger art, plus a fraction label plate. */
-    slot({ shape, d, n, width = 150, label = true, cols, base = true }) {
+    slot({ shape, d, n, width = 150, label = true, cols, base = true, baseWidth = null }) {
       const wrap = UI().el('div', 'slot');
       const b = BSC.Battery.create({ shape, d, n, cols, width });
       wrap.appendChild(b);
       // The fraction plate sits inside the charger's opening (as in the station artwork).
       let dock = wrap;
       if (base) {
-        const cw = Math.round(width * 1.05);
+        const cw = baseWidth || Math.round(width * 1.05);
         dock = UI().el('div', 'slot-dock'); dock.style.width = cw + 'px'; dock.style.setProperty('--cw', cw + 'px');
         const img = UI().el('img', 'slot-base'); img.src = 'assets/batteries/slot_charger.webp'; img.alt = ''; dock.appendChild(img);
         wrap.appendChild(dock);

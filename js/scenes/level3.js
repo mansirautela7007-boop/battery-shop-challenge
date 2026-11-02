@@ -22,7 +22,7 @@
         Cast.add('ira', { char: 'ira', pose: 'talk', x: 1150, bottom: 150, h: 380 }); Cast.enter('ira', 'right'); Cast.idle('ira');
         Cast.add('byte', { char: 'byte', pose: 'confused', x: 130, bottom: 430, h: 140 }); Cast.enter('byte', 'up');
         const { A, B } = pair([3, 5], [6, 10]);
-        await ctx.say('Byte', '6/10 has bigger numbers. Bolt has more charge?', { actor: 'byte' });
+        await ctx.say('Byte', '6/10 has bigger numbers. Does Bolt have more charge?', { actor: 'byte' });
         const tb = Learn.toolbox(A, 'Cut Zip’s pieces', null, ['×2']);
         const stop = Parts.tapHint(tb._btns[0]);
         await ctx.say('Ira', 'Let’s check. Tap ×2.', { wait: false, actor: 'ira' });
@@ -30,11 +30,12 @@
         await ctx.lock(() => BSC.L1Anim.cutAnim(ctx, A._b, { d: 10, n: 6, cols: 10 }));
         Learn.relabel(A, 6, 10); Parts.badge(A, 'ok'); Parts.badge(B, 'ok');
         UI.feedback('ok', '3/5 = 6/10. Same charge!');
-        await ctx.say('Ira', '3/5 = 6/10. Same charge. Both take the trip!', { actor: 'ira' });
+        await ctx.say('Ira', '3/5 is the same as 6/10. They have the same charge.', { actor: 'ira' });
+        await ctx.say('Ira', 'So both bots take the trip!', { actor: 'ira', pose: 'cheer' });
       },
       async (ctx) => {
         const { A, B } = pair([5, 6], [11, 12]);
-        await ctx.say('Ira', 'A new pair: 5/6 and 11/12. The pieces are different sizes. Make them the same size first.', { actor: 'ira', pose: 'point' });
+        await ctx.say('Ira', 'These pieces are different sizes. Let’s make them the same size first.', { actor: 'ira', pose: 'point' });
         const tb = Learn.toolbox(A, 'Cut Zip’s pieces', null, ['×2']);
         const stop = Parts.tapHint(tb._btns[0]);
         await ctx.say('Ira', 'Tap ×2.', { wait: false, actor: 'ira' });
@@ -47,15 +48,16 @@
         });
         Parts.badge(B, 'ok');
         UI.feedback('ok', '10 twelfths vs 11 twelfths: 11/12 is more.');
-        await ctx.say('Ira', '10 pieces and 11 pieces. 11 is more, so Bolt has more charge!', { actor: 'ira', pose: 'talk' });
+        await ctx.say('Ira', 'Zip has 10 charged pieces. Bolt has 11.', { actor: 'ira', pose: 'talk' });
+        await ctx.say('Ira', '11 is more, so Bolt has more charge!', { actor: 'ira', pose: 'point' });
       },
       async (ctx) => {
         const a = Learn.area(140);
         const card = UI.el('div', 'rule-card', '<small>The rule</small>Make the pieces the same size.<br>Then compare the charged pieces.'); a.appendChild(card); Anim.pop(card);
         a.insertAdjacentHTML('beforeend', `<div class="chain">${UI.frac(3, 5, 'lg')}<span class="op">×2</span>${UI.frac(6, 10, 'lg')}<span class="eq">=</span>${UI.frac(6, 10, 'lg')}<span style="width:40px"></span>${UI.frac(5, 6, 'lg')}<span class="op">×2</span>${UI.frac(10, 12, 'lg')}<span class="eq">&lt;</span>${UI.frac(11, 12, 'lg')}</div>`);
-        await ctx.say('Ira', 'Make the pieces the same size. Then compare the charged pieces.', { actor: 'ira' });
+        await ctx.say('Ira', 'First, make the pieces the same size. Then compare the charged pieces.', { actor: 'ira' });
         Cast.pose('byte', 'nod');
-        await ctx.say('Byte', 'Same pieces first. Got it!', { actor: 'byte', next: 'Let’s try' });
+        await ctx.say('Byte', 'So I make the pieces the same size first. Got it!', { actor: 'byte', next: 'Let’s try' });
       },
     ];
     await Learn.run(ctx, steps, params.step || 0);
@@ -103,7 +105,7 @@
       let phase = 'spin', wrong = 0, recut = false;
       const st = { a: 0, b: 0 };
       const sides = {};
-      const BW = R.shape === 'rect' || R.shape === 'diamond' ? 240 : 170;
+      const BW = Battery.wide(R.shape) ? 240 : 170;
       ['a', 'b'].forEach((k) => {
         const [name, n, d] = R[k];
         const s = UI.el('div', 'duel-side'); s.style.left = k === 'a' ? '170px' : '810px'; s.style.width = '300px'; s.style.top = '96px';
@@ -119,9 +121,8 @@
       const choices = UI.el('div', 'choices'); w.appendChild(choices);
       const track = UI.el('div'); w.appendChild(track);
 
-      const title = R.tutorial ? 'Tutorial' : R.id;
-      if (R.tutorial) ctx.say('Byte', 'New delivery! Which bot should I send? Tap Spin! to see their charge.', { wait: false });
-      else ctx.say('Byte', `${title}: which bot should I send? Tap Spin!`, { wait: false });
+      BSC.sayLines(ctx, R.tutorial ? [['Byte', 'New delivery! Which bot should I send?'], ['Ira', 'Tap Spin! to see their charge.']]
+        : [['Byte', 'Which bot should I send?'], ['Ira', 'Tap Spin!']], () => phase === 'spin');
 
       // ---------- spin ----------
       const spinBtn = UI.button('🎡 Spin!', { variant: 'primary', onClick: () => doSpin() });
@@ -132,7 +133,7 @@
         await ctx.lock(() => ctx.play(Anim.to([sides.a.wheel.querySelector('img'), sides.b.wheel.querySelector('img')], { rotation: (i) => 1080 + i * 140, duration: 1.5, ease: 'power3.out' })));
         ['a', 'b'].forEach((k) => { const S = sides[k]; S.wheel.querySelector('.wfr').innerHTML = `<span class="label-plate">${UI.frac(S.n, S.d)}</span>`; Anim.pop(S.wheel.querySelector('.wfr')); Cast.screen('bot' + k, UI.frac(S.n, S.d)); });
         if (R.numbers) { toChoose(); return; }
-        ctx.say('Ira', R.tutorial ? `${R.a[0]} has ${R.a[1]}/${R.a[2]}. ${R.b[0]} has ${R.b[1]}/${R.b[2]}. Add pieces to match each charge.` : `${R.a[0]} has ${R.a[1]}/${R.a[2]}. ${R.b[0]} has ${R.b[1]}/${R.b[2]}. Charge both batteries.`, { wait: false });
+        ctx.say('Ira', R.tutorial ? `${R.a[0]} has ${R.a[1]}/${R.a[2]}. ${R.b[0]} has ${R.b[1]}/${R.b[2]}.` : `${R.a[0]} has ${R.a[1]}/${R.a[2]}. ${R.b[0]} has ${R.b[1]}/${R.b[2]}. Charge both batteries.`, { wait: false });
         phase = 'charge'; buildCharge();
       }
 
@@ -173,7 +174,7 @@
         const tool = UI.el('button', 'tool', '×' + k); tool.type = 'button'; sides.a.holder.appendChild(tool);
         const stop = Parts.tapHint(tool);
         ctx.say('Byte', 'Bolt has bigger numbers. Is it Bolt?', { wait: false });
-        setTimeout(() => { if (ctx.alive && phase === 'tool') ctx.say('Ira', `Same pieces first! Tap ×${k} to cut Zip’s pieces.`, { wait: false }); }, 1600);
+        setTimeout(() => { if (ctx.alive && phase === 'tool') ctx.say('Ira', `Same pieces first! Tap ×${k}.`, { wait: false }); }, 1600);
         tool.addEventListener('click', () => ctx.lock(async () => {
           if (phase !== 'tool') return; stop(); tool.remove();
           await BSC.L1Anim.cutAnim(ctx, sides.a.batt, { d: R.hintDen, n: R.a[1] * k, cols: gridCols(R.shape, R.hintDen) });
@@ -186,7 +187,7 @@
       // ---------- choose ----------
       function toChoose(keepTalk) {
         phase = 'choose'; UI.actions([]);
-        if (!keepTalk) ctx.say('Ira', R.numbers ? `${R.a[0]}: ${R.a[1]}/${R.a[2]}. ${R.b[0]}: ${R.b[1]}/${R.b[2]}. Who has more charge, or is it the same?` : 'Look at the charge. Who has more, or is it the same?', { wait: false });
+        if (!keepTalk) ctx.say('Ira', R.numbers ? `${R.a[0]}: ${R.a[1]}/${R.a[2]}. ${R.b[0]}: ${R.b[1]}/${R.b[2]}. Who has more charge, or is it the same?` : 'Both right! Look at the charge. Who has more, or is it the same?', { wait: false });
         choices.innerHTML = '';
         [['a', `◂ ${R.a[0]}`], ['=', '= Same charge'], ['b', `${R.b[0]} ▸`]].forEach(([key, label]) => {
           const b = UI.el('button', 'choice', label); b.type = 'button'; b.dataset.k = key; choices.appendChild(b);
@@ -202,12 +203,12 @@
           const [name, n, d] = R[k]; const m = n * R.hintDen / d;
           const col = UI.el('div'); col.style.cssText = 'display:grid;justify-items:center;gap:4px;';
           col.innerHTML = `<b style="font-family:var(--f-display)">${name}: ${UI.frac(m, R.hintDen, 'in')}</b>`;
-          col.appendChild(Battery.create({ shape: R.shape, d: R.hintDen, n: m, cols: gridCols(R.shape, R.hintDen), width: R.shape === 'rect' || R.shape === 'diamond' ? 150 : 96, num: 'charged' }));
+          col.appendChild(Battery.create({ shape: R.shape, d: R.hintDen, n: m, cols: gridCols(R.shape, R.hintDen), width: Battery.wide(R.shape) ? 150 : 96, num: 'charged' }));
           p.appendChild(col);
         });
         p.insertAdjacentHTML('beforeend', `<div style="max-width:260px;font-size:19px;font-weight:800">${UI.fmt(R.why)}</div>`);
         w.appendChild(p); Anim.pop(p);
-        ctx.say('Duster', 'Now both batteries have the same number of pieces. Compare the charged pieces.', { wait: false });
+        ctx.say('Ira', 'Now both batteries have the same number of pieces. Compare the charged pieces.', { wait: false });
       }
       async function choose(key, btn) {
         if (key === R.ans) {

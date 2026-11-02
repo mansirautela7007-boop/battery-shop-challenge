@@ -116,17 +116,12 @@
     hud: {
       build() {
         const hud = $('#hud');
-        hud.innerHTML = `<button type="button" class="hbtn" id="hud-home" aria-label="Levels">☰ <span>Levels</span></button>
-          <div class="hud-title"><span class="chip" id="hud-level"></span><span id="hud-name"></span></div>
+        // Header: only the sound toggle is a button (Esc still opens Pause; hints appear by themselves after wrong tries)
+        hud.innerHTML = `<div class="hud-title"><span class="chip" id="hud-level"></span><span id="hud-name"></span></div>
           <div class="hud-progress" id="hud-progress" aria-label="Progress"></div>
           <div class="hud-bolts" id="hud-bolts" aria-label="Bolts collected"><span class="bi" aria-hidden="true">⚡</span><b id="hud-bolt-n">0</b></div>
-          <button type="button" class="hbtn hint" id="hud-hint" hidden aria-label="Hint">💡 <span>Hint</span></button>
-          <button type="button" class="hbtn icon" id="hud-sound" aria-label="Sound"></button>
-          <button type="button" class="hbtn icon" id="hud-pause" aria-label="Pause">❚❚</button>`;
-        $('#hud-home').addEventListener('click', () => { BSC.Audio.play('tap'); BSC.Game.go('levels'); });
-        $('#hud-pause').addEventListener('click', () => { BSC.Audio.play('tap'); BSC.Pause.open(); });
+          <button type="button" class="hbtn icon" id="hud-sound" aria-label="Sound"></button>`;
         $('#hud-sound').addEventListener('click', () => { const s = BSC.Store.get().settings; BSC.Audio.setSound(!s.sound); UI.hud.sound(); BSC.Audio.play('tap'); });
-        $('#hud-hint').addEventListener('click', () => { if (UI.hud._hint && !BSC.Game.busy) { BSC.Audio.play('tap'); UI.hud._hint(); } });
         UI.hud.sound();
         $('#hud-bolt-n').textContent = BSC.Store.get().bolts || 0;
       },

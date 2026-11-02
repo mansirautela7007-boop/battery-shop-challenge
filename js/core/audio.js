@@ -78,7 +78,6 @@
   const TTS = { // preferred system voices (same as the recorded ones on a Mac), then a fallback pitch/rate
     Ira: { names: ['Tara', 'Veena', 'Samantha'], lang: 'en-IN', pitch: 1.15, rate: 1 },
     Byte: { names: ['Junior', 'Rishi'], lang: 'en', pitch: 1.5, rate: 1.05 },
-    Duster: { names: ['Grandpa', 'Daniel'], lang: 'en-GB', pitch: 0.8, rate: 0.9 },
     Narrator: { names: ['Shelley', 'Moira', 'Karen'], lang: 'en-GB', pitch: 1, rate: 0.95 },
     Bot: { names: ['Fred', 'Zarvox'], lang: 'en-US', pitch: 0.6, rate: 0.95 },
   };

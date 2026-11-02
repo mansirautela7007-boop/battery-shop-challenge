@@ -7,7 +7,7 @@
 
   // ------------------------------------------------------------ Learn
   BSC.Scenes.l3learn = async function (ctx, params) {
-    UI.setBg('bg_learning_bench');
+    UI.setBg(null, { tint: 'plain' });
     const pair = (a, bf) => {
       const area = Learn.area(130);
       const r = Learn.row(area, 60);
@@ -64,7 +64,7 @@
 
   // ------------------------------------------------------------ Play
   BSC.Scenes.l3game = async function (ctx, params) {
-    UI.setBg('bg_delivery_gate', { tint: 'soft' });
+    UI.setBg(null, { tint: 'plain' });
     const S = BSC.Store.get();
     const rounds = Levels.L3;
     for (let i = params.step || 0; i < rounds.length; i++) {

@@ -91,28 +91,37 @@
     for (const n of cfg.names) { const v = all.find((x) => x.name.startsWith(n)); if (v) return v; }
     return all.find((x) => x.lang.replace('_', '-').startsWith(cfg.lang)) || all.find((x) => x.lang.startsWith('en')) || null;
   }
+  let voiceDone = null; // resolves the current line's promise: true = spoken to the end, false = none/stopped/failed
+  const finish = (ok) => { const r = voiceDone; voiceDone = null; if (r) r(ok); };
   function stopVoice() {
-    if (voiceEl) { voiceEl.pause(); voiceEl.removeAttribute('src'); voiceEl.load(); }
+    if (voiceEl) { voiceEl.onended = voiceEl.onerror = null; voiceEl.pause(); voiceEl.removeAttribute('src'); voiceEl.load(); }
     if (synth) synth.cancel();
+    finish(false);
   }
+  /** Speak a dialogue line. Returns a promise: true once it has been spoken to the end, false if it wasn't voiced. */
   function voice(who, text) {
     stopVoice();
-    if (!settings().sound) return;
+    if (!settings().sound) return Promise.resolve(false);
+    const done = new Promise((res) => { voiceDone = res; });
     const file = BSC.Voices && BSC.Voices[who + '|' + text];
     if (file) {
       if (!voiceEl) { voiceEl = new Audio(); voiceEl.preload = 'auto'; }
+      voiceEl.onended = () => finish(true);
+      voiceEl.onerror = () => finish(false);
       voiceEl.src = `assets/voice/${file}`;
       const p = voiceEl.play();
-      if (p && p.catch) p.catch(() => { /* autoplay blocked or file missing: text still shows */ });
-      return;
+      if (p && p.catch) p.catch(() => finish(false)); // autoplay blocked or file missing: text still shows
+      return done;
     }
-    if (!synth || typeof SpeechSynthesisUtterance === 'undefined') return;
+    if (!synth || typeof SpeechSynthesisUtterance === 'undefined') { finish(false); return done; }
     const cfg = TTS[who] || TTS.Bot; // any other speaker is a named bot (Zip, Bolt…)
     const u = new SpeechSynthesisUtterance(speakable(text));
     const v = pickVoice(cfg);
     if (v) { u.voice = v; u.lang = v.lang; }
     u.pitch = cfg.pitch; u.rate = cfg.rate;
+    u.onend = () => finish(true); u.onerror = () => finish(false);
     synth.speak(u);
+    return done;
   }
 
   BSC.Audio = {

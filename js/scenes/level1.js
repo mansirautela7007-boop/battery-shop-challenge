@@ -28,9 +28,9 @@
       const btns = buttons.map((b) => { const el = UI.el('button', 'tool', b); el.type = 'button'; r.appendChild(el); return el; });
       t.appendChild(r); parent.appendChild(t); t._btns = btns; return t;
     },
-    duster(pose = 'explain') {
-      if (!Cast.get('duster')) { Cast.add('duster', { char: 'duster', pose, x: 1150, bottom: 150, h: 360 }); Cast.enter('duster', 'holo'); Cast.idle('duster'); }
-      else Cast.pose('duster', pose);
+    duster(pose = 'explain', { x = 1150, bottom = 150, h = 360 } = {}) {
+      if (!Cast.get('duster')) { Cast.add('duster', { char: 'duster', pose, x, bottom, h }); Cast.enter('duster', 'holo'); Cast.idle('duster'); }
+      else { Object.assign(Cast.get('duster').style, { left: x + 'px', bottom: bottom + 'px', height: h + 'px' }); Cast.pose('duster', pose); }
     },
     /** Wait until the learner writes [n,d]. Feedback follows the storyboard (scenes 19–21). */
     ask(ctx, host, target, { label = 'What is the new fraction?', batt = null } = {}) {
@@ -93,36 +93,167 @@
   }
   BSC.L1Anim = { cutAnim, joinAnim };
 
+  // ------------------------------------------------------------ "Cut and join" intro (9-frame storyboard)
+  // Layout follows the storyboard image (1280×720 stage), at a calmer size. Duster stays half-body in the corner and
+  // talks in a speech bubble; the circle, the cut tools and the panels move between fixed spots.
+  // Frames 1, 6, 9 wait for the round arrow; 2, 7, 8 wait for the highlighted tool; 3–5 play by themselves.
+  const plain = (s) => String(s).replace(/\*\*/g, '').replace(/\|/g, ' ');
+  const rich = (s) => String(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').split('|').map((p, i) => `<p class="${i ? 'sub' : /\*\*/.test(s) ? 'mixed' : 'lead'}">${p}</p>`).join('');
+  const CF = {
+    duster: { x: 150, h: 640, bottom: -300 }, // half body: waist at the bottom edge, same spot in every frame
+    bubble: { left: 34, bottom: 352, width: 380 }, // sits on Duster's head (bottom-anchored, grows upward), tail points down at him
+    circle: { right: { x: 640, top: 150, w: 320 }, left: { x: 640, top: 150, w: 320 }, mid: { x: 640, top: 150, w: 290 } }, // battery stays centred
+    tools: { side: { left: 850, top: 330, width: 300, height: 160 } }, // always right beside the battery (below the cutter's path)
+  };
+
+  async function cutFlow(ctx) {
+    BSC.Dialog.hide();
+    const w = UI.world();
+    const old = document.getElementById('cutflow'); if (old) old.remove();
+    const root = UI.el('div'); root.id = 'cutflow'; w.appendChild(root);
+
+    // Duster: solid (no hologram), half body in the bottom-left corner for the whole intro.
+    if (!Cast.get('duster')) Cast.add('duster', { char: 'duster', pose: 'point', x: CF.duster.x, bottom: CF.duster.bottom, h: CF.duster.h });
+    const dEl = Cast.get('duster'); dEl.classList.remove('holo'); dEl.classList.add('cf-duster');
+    gsap.set(dEl, { left: CF.duster.x, bottom: CF.duster.bottom, height: CF.duster.h, opacity: 0 });
+    Cast.pose('duster', 'point'); Cast.idle('duster');
+
+    const bubble = UI.el('div', 'sbubble'); bubble.hidden = true; root.appendChild(bubble);
+    const circ = UI.el('div', 'cf-circle'); root.appendChild(circ);
+    const batt = Battery.create({ shape: 'circle', d: 2, n: 1, width: 320 }); circ.appendChild(batt);
+    const plate = UI.el('div', 'label-plate cf-plate', UI.frac(1, 2)); circ.appendChild(plate);
+    const tools = UI.el('div', 'panel cf-tools'); tools.hidden = true;
+    tools.innerHTML = '<div class="cf-title">Cut each part into</div>';
+    const trow = UI.el('div', 'cf-row'); tools.appendChild(trow);
+    const btns = ['×2', '×3', '×4'].map((t) => { const b = UI.el('button', 'tool', t); b.type = 'button'; trow.appendChild(b); return b; });
+    root.appendChild(tools);
+
+    const dur = () => (Anim.reduced ? 0.01 : 0.45);
+    const placeCircle = (k) => { const p = CF.circle[k]; return gsap.to(circ, { left: p.x - p.w / 2, top: p.top, width: p.w, duration: dur(), ease: 'power2.inOut' }); };
+    const placeTools = () => gsap.to(tools, Object.assign({ opacity: 1, duration: dur(), ease: 'power2.inOut' }, CF.tools.side));
+    const placeBubble = (k) => { Object.assign(bubble.style, { left: CF.bubble.left + 'px', top: 'auto', bottom: CF.bubble.bottom + 'px', width: CF.bubble.width + 'px' }); bubble.dataset.size = k; };
+    const relabel = (n, d) => { plate.innerHTML = UI.frac(n, d); Anim.pop(plate); };
+    gsap.set(circ, { left: CF.circle.right.x - CF.circle.right.w / 2, top: CF.circle.right.top, width: CF.circle.right.w });
+    gsap.set(tools, CF.tools.side); tools.dataset.size = 'md'; tools.hidden = false;
+
+    // Speak a line in the bubble. mode: 'arrow' (wait for ›), 'auto' (move on after the voice / reading time), 'none' (return at once)
+    async function line(text, { mode = 'auto', pose = null, at = 'intro', show = true, hl = null } = {}) {
+      ctx.check();
+      if (pose) Cast.pose('duster', pose);
+      bubble.hidden = !show;
+      if (show) { placeBubble(at); bubble.innerHTML = rich(text) + (hl ? `<p class="hl">${hl}</p>` : ''); Anim.fromTo(bubble, { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3 }); }
+      Cast.talk('duster');
+      const spoken = BSC.Audio.voice('Duster', plain(text) + (hl ? ' ' + hl : ''));
+      if (mode === 'none') return;
+      if (mode === 'arrow') return arrow();
+      const ok = await spoken; ctx.check();
+      await ctx.hold(ok ? 0.5 : Math.max(2, 1 + plain(text).split(/\s+/).length * 0.3));
+    }
+    async function arrow() {
+      const b = UI.button('›', { variant: 'arrow', aria: 'Next' });
+      UI.actions([b]); await ctx.tap(b); UI.actions([]); BSC.Audio.stopVoice(); ctx.check();
+    }
+    // Ring one tool (dashed) and wait for it; the others just nudge.
+    function tapTool(k) {
+      btns.forEach((b, i) => { b.classList.toggle('demo', i === k - 2); b.classList.remove('picked'); });
+      return new Promise((resolve) => btns.forEach((b, i) => ctx.on(b, 'click', () => {
+        if (i !== k - 2) { UI.feedback('hint', `Tap ×${k} this time.`); Anim.shake(b, 6); return; }
+        UI.feedback(null); if (k === 2) { b.classList.remove('demo'); b.classList.add('picked'); } BSC.Audio.play('tap'); resolve();
+      })));
+    }
+    // Frame 3: the cutter fires a laser at the circle; the new cut lines glow, then the parts split.
+    async function laser(k) {
+      const R = Battery.CASINGS.circle.region, C = Battery.CASINGS.circle;
+      const cw = parseFloat(circ.style.width), cl = parseFloat(circ.style.left), ct = parseFloat(circ.style.top);
+      const s = cw / C.w, cx = cl + R.cx * s, cy = ct + R.cy * s, r = R.r * s;
+      const gun = UI.el('img'); gun.src = 'assets/batteries/tool_cutter.webp'; gun.alt = ''; gun.className = 'cf-gun';
+      const gw = 200, gx = cx + r * 1.12, gy = cy - r * 1.05;
+      gun.style.cssText = `left:${gx}px;top:${gy}px;width:${gw}px;`;
+      root.appendChild(gun);
+      const mx = gx + 8, my = gy + gw * 0.52 * 0.3; // muzzle (left end of the barrel)
+      const beam = UI.el('div', 'cf-beam'); const len = Math.hypot(mx - cx, my - cy), ang = Math.atan2(cy - my, cx - mx);
+      beam.style.cssText = `left:${mx}px;top:${my}px;width:${len}px;`;
+      root.appendChild(beam); gsap.set(beam, { rotation: (ang * 180) / Math.PI, scaleX: 0.001, transformOrigin: '0% 50%' });
+      const svg = batt.querySelector('svg'), d = 2 * k;
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g'); g.setAttribute('class', 'b-laser');
+      for (let i = 0; i < d; i++) { const a = -Math.PI / 2 + (2 * Math.PI * i) / d; g.innerHTML += `<path d="M${R.cx},${R.cy}L${(R.cx + R.r * Math.cos(a)).toFixed(1)},${(R.cy + R.r * Math.sin(a)).toFixed(1)}"/>`; }
+      svg.appendChild(g);
+      BSC.Audio.play('cut');
+      await ctx.play(gsap.timeline()
+        .fromTo(gun, { x: 60, opacity: 0, rotation: -18 }, { x: 0, opacity: 1, rotation: -18, duration: Anim.reduced ? 0.01 : 0.35, ease: 'power2.out' })
+        .to(beam, { scaleX: 1, duration: Anim.reduced ? 0.01 : 0.25, ease: 'power1.in' })
+        .fromTo(g, { opacity: 0 }, { opacity: 1, duration: 0.2 }, '<0.15'));
+      Anim.burst(cx, cy, 'spark', 12);
+      await ctx.play(Battery.set(batt, { d, n: k }, { anim: 'split' }));
+      await ctx.play(gsap.timeline().to([beam, g], { opacity: 0, duration: 0.3 }).to(gun, { opacity: 0, x: 40, duration: 0.3 }, '<0.1'));
+      gun.remove(); beam.remove(); g.remove();
+    }
+    const reset = () => { Battery.set(batt, { d: 2, n: 1 }); relabel(1, 2); };
+
+    // 1. Introduction
+    await ctx.play(gsap.to(dEl, { opacity: 1, duration: dur() }));
+    Anim.from(tools, { x: 40, opacity: 0, duration: 0.4 });
+    await line('This circle shows **1 out of 2 equal parts,** which we write as **1/2**.', { pose: 'point', at: 'intro' });
+    // 2. Instruction: tap the highlighted tool beside the battery
+    line('Let’s cut each part into 2 equal pieces.|Choose how many pieces to make from each part.', { mode: 'none', pose: 'explain', at: 'tools' });
+    await tapTool(2);
+    // 3. Action: laser cut (battery and tools stay where they are)
+    bubble.hidden = true; BSC.Audio.stopVoice();
+    await ctx.lock(() => laser(2));
+    relabel(2, 4);
+    await ctx.hold(0.4);
+    // 4. Pieces created
+    await line('Great! Each half is now cut into 2 pieces.|Now we have 4 equal parts.', { pose: 'point', at: 'intro' });
+    // 5. Concept
+    await line('Two out of four parts are shaded.', { pose: 'explain', at: 'intro', hl: 'The shaded amount is the same!' });
+    // 6. Equation
+    bubble.hidden = true; gsap.to([circ, tools], { opacity: 0, duration: 0.25 });
+    const eq = UI.el('div', 'panel cf-panel cf-eqpanel');
+    eq.innerHTML = `<div class="cf-head">These fractions are equivalent.</div>
+      <div class="cf-eq">${UI.frac(1, 2)}<span class="cf-sign">=</span>
+      <span class="fr cf-mul"><b><em>1</em> × <u>2</u></b><i><em>2</em> × <u>2</u></i></span><span class="cf-sign">=</span>${UI.frac(2, 4)}</div>`;
+    root.appendChild(eq); Anim.pop(eq);
+    await line('These fractions are equivalent. 1/2 equals 1 times 2 over 2 times 2, which is 2/4.', { pose: 'explain', show: false });
+    eq.remove();
+    // 7–8. Try ×3, then ×4: bubble, circle and tools side by side
+    for (const [k, txt, pose] of [[3, 'Let’s try ×3.|Each half will be cut into 3 pieces.', 'explain'], [4, 'Now try ×4.|Each half will be cut into 4 pieces.', 'point']]) {
+      reset();
+      tools.hidden = false;
+      await ctx.play(gsap.timeline().add(placeCircle('mid')).to(circ, { opacity: 1, duration: 0.3 }, '<').add(placeTools(), '<'));
+      line(txt, { mode: 'none', pose, at: 'small' });
+      await tapTool(k);
+      await ctx.lock(() => laser(k));
+      relabel(k, 2 * k);
+      await ctx.hold(1.2);
+    }
+    // 9. Summary
+    bubble.hidden = true; gsap.to([circ, tools], { opacity: 0, duration: 0.25 });
+    const sum = UI.el('div', 'panel cf-panel cf-sumpanel');
+    sum.innerHTML = '<div class="cf-head">Summary</div>';
+    const srow = UI.el('div', 'cf-sum'); sum.appendChild(srow);
+    [[1, 2], [2, 4], [3, 6], [4, 8]].forEach(([n, d], i) => {
+      if (i) srow.appendChild(UI.el('span', 'cf-sign', '='));
+      const cell = UI.el('div', 'cf-sumcell'); cell.appendChild(Battery.create({ shape: 'circle', d, n, width: 118 }));
+      cell.appendChild(UI.el('div', 'label-plate', UI.frac(n, d))); srow.appendChild(cell);
+    });
+    sum.appendChild(UI.el('div', 'cf-banner', 'When we cut each part into equal pieces,<br>the shaded amount stays the same.'));
+    root.appendChild(sum); Anim.pop(sum);
+    await line('When we cut each part into equal pieces, the shaded amount stays the same.', { pose: 'explain', show: false });
+    root.remove();
+    // Back to the usual hologram Duster on the right for the rest of the lesson.
+    dEl.classList.remove('cf-duster'); dEl.classList.add('holo'); gsap.set(dEl, { opacity: 1 });
+    Learn.duster('explain');
+  }
+
   // ------------------------------------------------------------ Level 1 Learn
   BSC.Scenes.l1learn = async function (ctx, params) {
+    ctx.auto = true; ctx.float = false; // no Next/arrow buttons: lines move on after the voice; keep the bottom dialogue
+    ctx.auto = true; ctx.float = false; // no Next/arrow buttons: lines move on after the voice; keep the bottom dialogue
     UI.setBg('bg_learning_bench');
-    Learn.duster();
+    if ((params.step || 0) > 0) Learn.duster(); // step 0 (the cut intro) places Duster itself
     const steps = [
-      // Beats 1–4: cut each part of 1/2 with ×2, ×3, ×4
-      async (ctx) => {
-        const a = Learn.area();
-        const r = Learn.row(a);
-        const box = Learn.big(r, { shape: 'circle', d: 2, n: 1, width: 230 });
-        const tb = Learn.toolbox(r, 'Cut each part', 'tool_cutter', ['×2', '×3', '×4']);
-        const chain = UI.el('div'); a.appendChild(chain);
-        const found = [];
-        const drawChain = () => { chain.innerHTML = Parts.chain([{ n: 1, d: 2 }, ...found.sort((x, y) => x - y).map((k) => ({ n: k, d: 2 * k, op: '×' + k }))]); };
-        drawChain();
-        await ctx.say('Duster', 'Let’s see why they match. Tap ×2 to cut every part into 2.', { wait: false, actor: 'duster', pose: 'point' });
-        const stop = Parts.tapHint(tb._btns[0]);
-        await new Promise((resolve) => {
-          tb._btns.forEach((btn, i) => ctx.on(btn, 'click', () => ctx.lock(async () => {
-            stop();
-            const k = i + 2; if (found.includes(k)) return;
-            await cutAnim(ctx, box._b, { d: 2 * k, n: k });
-            Learn.relabel(box, k, 2 * k); found.push(k); btn.classList.add('used'); drawChain();
-            if (found.length === 1) await ctx.say('Duster', `More pieces. Same charge: ${k}/${2 * k} covers the same part as 1/2. Try the other cuts.`, { wait: false, actor: 'duster' });
-            else if (found.length === 2) await ctx.say('Duster', 'Count the pieces each time. The charged part never moves.', { wait: false, actor: 'duster' });
-            else resolve();
-          })));
-        });
-        await ctx.say('Duster', '×2 gives 2/4. ×3 gives 3/6. ×4 gives 4/8. The same number multiplies the top and the bottom.', { actor: 'duster', pose: 'explain' });
-      },
+      // Beats 1–4: cut each part of 1/2 with ×2, ×3, ×4 (9-frame storyboard: speech bubble, round arrow, summary)
+      cutFlow,
       // Beats 5–7: join 4/8 → 2/4 → 1/2
       async (ctx) => {
         const a = Learn.area(); const r = Learn.row(a);
@@ -284,6 +415,67 @@
   }
   BSC.levelDone = levelDone;
 
+  /** Stage-space box of an element (the stage is scaled to fit the window). */
+  function box(el) {
+    const st = document.getElementById('stage').getBoundingClientRect(), r = el.getBoundingClientRect(), k = UI.scale();
+    return { x: (r.left - st.left) / k, y: (r.top - st.top) / k, w: r.width / k, h: r.height / k };
+  }
+  /** Right slot: the bot hops over to the charger, the charger's cable plugs into it and it charges up. */
+  async function plugIn(ctx, { card, slot, bot, n, d }) {
+    const w = UI.world(), dock = box(slot.querySelector('.slot-dock')), from = box(card), botH = 120;
+    BSC.Dialog.hide(); // clear the floor: the old instruction would cover the bot
+    // 1. The bot leaves its card and hops in an arc to stand in front of its charger.
+    const sx = dock.x + dock.w * 0.58, groundY = dock.y + dock.h + 94; // just in front of its own charger, below its label
+    const a = Cast.add('plugged', { char: bot, pose: 'neutral', x: sx, bottom: 720 - groundY, h: botH, cls: 'plugged', parent: w });
+    Cast.screen('plugged', UI.frac(n, d));
+    const inCard = Cast.get('bot'); if (inCard) gsap.to(inCard, { opacity: 0, duration: 0.2 });
+    card.classList.add('emptied');
+    const dx = from.x + from.w / 2 - sx, dy = from.y + from.h * 0.62 - (groundY - botH / 2), apex = Math.min(dy, 0) - 90;
+    BSC.Audio.play('pick');
+    await ctx.play(gsap.timeline()
+      .fromTo(a, { x: dx }, { x: 0, duration: Anim.reduced ? 0.01 : 0.75, ease: 'power1.inOut' }, 0)
+      .fromTo(a, { y: dy }, { y: apex, duration: Anim.reduced ? 0.01 : 0.38, ease: 'power2.out' }, 0)
+      .to(a, { y: 0, duration: Anim.reduced ? 0.01 : 0.37, ease: 'power2.in' }, Anim.reduced ? 0.01 : 0.38));
+    BSC.Audio.play('drop');
+    if (!Anim.reduced) await ctx.play(gsap.fromTo(a.querySelector('img'), { scaleY: 0.82, scaleX: 1.12, transformOrigin: '50% 100%' }, { scaleY: 1, scaleX: 1, duration: 0.4, ease: 'elastic.out(1.2, 0.4)' }));
+
+    // 2. The cable runs from the charger's plug to the port on the bot's side and clicks in.
+    const plug = [dock.x + dock.w * 0.04, dock.y + dock.h * 0.84], bb = box(a.querySelector('img'));
+    const port = [bb.x + bb.w * 0.2, bb.y + bb.h * 0.6]; // port on the bot's left side, facing the plug
+    const sag = [Math.min(plug[0], port[0]) - 26, Math.max(plug[1], port[1]) + 18];
+    const path = `M${plug[0]},${plug[1]} Q${sag[0]},${sag[1]} ${port[0]},${port[1]}`;
+    const cable = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    cable.setAttribute('class', 'plug-cable'); cable.setAttribute('viewBox', '0 0 1280 720');
+    cable.innerHTML = `<path class="wire" d="${path}"/><path class="flow" d="${path}"/><circle class="jack" cx="${port[0]}" cy="${port[1]}" r="9"/>`;
+    w.appendChild(cable);
+    const wire = cable.querySelector('.wire'), flow = cable.querySelector('.flow'), jack = cable.querySelector('.jack'), len = wire.getTotalLength();
+    gsap.set(wire, { strokeDasharray: len, strokeDashoffset: len }); gsap.set([flow, jack], { opacity: 0 });
+    await ctx.play(Anim.to(wire, { strokeDashoffset: 0, duration: 0.45, ease: 'power2.inOut' }));
+    gsap.set(jack, { opacity: 1 }); Anim.pop(jack); BSC.Audio.play('clunk'); Anim.burst(port[0], port[1], 'spark', 10);
+
+    // 3. Charging: energy pulses along the cable, the slot's charge flashes, the bot glows and its meter fills.
+    const meter = UI.el('div', 'charge-meter', '<span class="cm-ic">⚡</span><span class="cm-bar"><b></b></span>');
+    meter.style.left = (sx + 112) + 'px'; meter.style.top = (groundY - botH * 0.62) + 'px'; w.appendChild(meter); // beside the bot
+    Anim.pop(meter);
+    gsap.set(flow, { opacity: 1 });
+    if (!Anim.reduced) {
+      gsap.fromTo(flow, { strokeDashoffset: 0 }, { strokeDashoffset: -60, duration: 0.5, ease: 'none', repeat: -1 }); // keeps flowing while plugged
+      gsap.to(a.querySelector('img'), { filter: 'drop-shadow(0 0 18px rgba(69,227,255,.95)) drop-shadow(0 12px 12px rgba(30,34,82,.3))', duration: 0.35, yoyo: true, repeat: 5 });
+    }
+    a.classList.add('charging');
+    BSC.Audio.play('charge');
+    Battery.set(slot._batt, {}, { anim: 'fill' });
+    const sparks = Anim.reduced ? null : gsap.to({}, { duration: 0.22, repeat: 6, onRepeat: () => Anim.burst(bb.x + bb.w / 2, bb.y + bb.h * 0.45, 'cyan', 3) });
+    await ctx.play(Anim.fromTo(meter.querySelector('b'), { width: '0%' }, { width: '100%', duration: 1.5, ease: 'power1.inOut' }));
+    if (sparks) sparks.kill();
+
+    // 4. Full: the meter goes green, the bot cheers.
+    meter.classList.add('full'); meter.querySelector('.cm-ic').textContent = '✓';
+    a.classList.remove('charging');
+    BSC.Audio.play('star'); Anim.burst(sx + 112, groundY - botH * 0.55, 'star', 10);
+    Cast.pose('plugged', 'happy'); await ctx.play(Cast.hop('plugged'));
+  }
+
   /** One A-item. Resolves when the bot is charged and the learner presses Next. */
   function playItem(ctx, L, idx) {
     return new Promise((resolve, reject) => {
@@ -291,15 +483,17 @@
       const [n, d] = L.need;
       let tries = 0, hintRung = 0, solved = false, picked = false, idleT = null;
 
-      // Bot card (left)
+      // Charging platform: the bot waits on the first pad, the four chargers stand on the others
+      const plat = UI.el('div', 'l1-platform', '<div class="deck"></div>' + [0, 1, 2, 3, 4].map((i) => `<i class="pad" style="left:${108 + 216 * i}px"></i>`).join('') + '<b class="glow c" style="left:240px"></b><b class="glow p" style="left:470px"></b><b class="glow c" style="left:700px"></b><b class="glow p" style="left:930px"></b>');
+      w.appendChild(plat);
+      // The bot (drag handle) on pad 1, with a small "Needs" tag showing its charge
       const card = UI.el('div', 'botcard selectable'); card.tabIndex = 0; card.setAttribute('role', 'button');
       card.setAttribute('aria-label', `Bot needing ${n} over ${d}. Drag to a slot, or press to pick up and then choose a slot.`);
       w.appendChild(card);
-      Cast.add('bot', { char: L.bot, pose: 'neutral', x: 135, bottom: 175, h: 220, parent: card });
+      Cast.add('bot', { char: L.bot, pose: 'neutral', x: 100, bottom: 10, h: 215, parent: card });
       Cast.screen('bot', UI.frac(n, d));
-      const need = Battery.create({ shape: L.shape, d, n, width: 150 }); need.style.cssText += 'position:absolute;left:60px;bottom:16px;';
-      card.appendChild(need);
-      const tag = UI.el('div', 'label-plate', `Needs ${UI.frac(n, d)}`); tag.style.cssText = 'position:absolute;left:50%;top:-22px;transform:translateX(-50%);font-size:24px;white-space:nowrap;'; card.appendChild(tag);
+      const tag = UI.el('div', 'label-plate need-tag', `<span>Needs</span>${UI.frac(n, d)}`); card.appendChild(tag);
+      tag.appendChild(Battery.create({ shape: L.shape, d, n, width: L.shape === 'rect' || L.shape === 'diamond' ? 76 : 52 }));
 
       // Slots (right)
       const order = [0, 1, 2, 3].sort((a, b) => ((a * 7 + idx * 3) % 5) - ((b * 7 + idx * 3) % 5));
@@ -344,16 +538,8 @@
         if (F.equal([sn, sd], L.need)) {
           solved = true; UI.hud.setHint(null);
           await ctx.lock(async () => {
-            const ghost = card.cloneNode(true); ghost.classList.add('drag-ghost'); ghost.style.left = ghost.style.top = '';
-            const [cx, cy] = Anim.centre(card), [tx, ty] = Anim.centre(s._batt);
-            ghost.style.cssText += `left:${cx}px;top:${cy}px;width:270px;height:420px;`;
-            w.appendChild(ghost); card.style.opacity = 0.2;
-            await ctx.play(Anim.to(ghost, { left: tx, top: ty, scale: 0.35, opacity: 0.0, duration: 0.6, ease: 'power2.in' }));
-            ghost.remove();
             s.classList.add('is-ok'); Parts.badge(s, 'ok');
-            BSC.Audio.play('charge'); Anim.burst(tx, ty, 'cyan', 14);
-            await ctx.play(Battery.set(s._batt, {}, { anim: 'fill' }));
-            card.style.opacity = 1; Cast.pose('bot', 'happy'); Cast.hop('bot');
+            await plugIn(ctx, { card, slot: s, bot: L.bot, n, d });
             const why = sd > d ? `each piece of ${n}/${d} is cut into ${sd / d}` : `every ${d / sd} pieces of ${n}/${d} are joined into 1`;
             UI.feedback('ok', `Right slot! ${n}/${d} = ${sn}/${sd}: ${why}.`);
           });

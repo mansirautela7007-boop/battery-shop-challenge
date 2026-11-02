@@ -32,6 +32,7 @@
     },
     resetStage() {
       $('#world').innerHTML = '';
+      BSC.Cast.clear(); // actors from the last scene are gone with #world; don't let a scene reuse them
       $('#fx').innerHTML = '';
       UI.feedback(null);
       UI.actions([]);
@@ -64,9 +65,9 @@
       const icon = { ok: '✓', bad: '!', hint: '?', info: 'i', warn: '!' }[kind] || '';
       f.className = 'show ' + kind;
       f.innerHTML = `<span class="ic" aria-hidden="true">${icon}</span><span class="tx">${fmt(html)}</span>`;
-      BSC.Anim.fromTo(f, { y: -12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3 });
-      if (kind === 'ok') BSC.Audio.play('ok');
-      if (kind === 'bad') BSC.Audio.play('wrong');
+      BSC.Anim.fromTo(f, { y: -16, opacity: 0, scale: 0.9 }, { y: 0, opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(2.2)' });
+      if (kind === 'ok') { BSC.Audio.play('ok'); UI.hud.reward(f.querySelector('.ic')); }
+      if (kind === 'bad') { BSC.Audio.play('wrong'); BSC.Anim.shake(f, 8); }
     },
 
     /** Fraction entry: two boxes + number tiles. onCheck(top, bottom, api). Changing anything clears feedback. */
@@ -105,6 +106,7 @@
       m.innerHTML = `<div class="card" role="dialog" aria-modal="true">${html}<div class="modal-actions"></div></div>`;
       const bar = $('.modal-actions', m);
       buttons.forEach((b) => { const btn = el('button', `btn ${b.variant || 'secondary'}`, b.label); btn.type = 'button'; btn.addEventListener('click', () => { BSC.Audio.play('tap'); b.onClick(); }); bar.appendChild(btn); });
+      if (m.hidden) m.querySelector('.card').classList.add('pop'); // CSS pop: Pause freezes GSAP, so it can't animate this
       m.hidden = false;
       const first = $('.btn.primary', m) || $('.btn', m); if (first) first.focus();
       return m;
@@ -117,6 +119,7 @@
         hud.innerHTML = `<button type="button" class="hbtn" id="hud-home" aria-label="Levels">☰ <span>Levels</span></button>
           <div class="hud-title"><span class="chip" id="hud-level"></span><span id="hud-name"></span></div>
           <div class="hud-progress" id="hud-progress" aria-label="Progress"></div>
+          <div class="hud-bolts" id="hud-bolts" aria-label="Bolts collected"><span class="bi" aria-hidden="true">⚡</span><b id="hud-bolt-n">0</b></div>
           <button type="button" class="hbtn hint" id="hud-hint" hidden aria-label="Hint">💡 <span>Hint</span></button>
           <button type="button" class="hbtn icon" id="hud-sound" aria-label="Sound"></button>
           <button type="button" class="hbtn icon" id="hud-pause" aria-label="Pause">❚❚</button>`;
@@ -125,19 +128,49 @@
         $('#hud-sound').addEventListener('click', () => { const s = BSC.Store.get().settings; BSC.Audio.setSound(!s.sound); UI.hud.sound(); BSC.Audio.play('tap'); });
         $('#hud-hint').addEventListener('click', () => { if (UI.hud._hint && !BSC.Game.busy) { BSC.Audio.play('tap'); UI.hud._hint(); } });
         UI.hud.sound();
+        $('#hud-bolt-n').textContent = BSC.Store.get().bolts || 0;
       },
       sound() { const on = BSC.Store.get().settings.sound; const b = $('#hud-sound'); b.textContent = on ? '🔊' : '🔇'; b.setAttribute('aria-label', on ? 'Sound on' : 'Sound off'); },
       update(id) {
         const hud = $('#hud');
         const flow = BSC.Game.FLOW.find((f) => f.id === id);
         hud.hidden = !flow;
+        $('#stage').dataset.level = flow ? flow.level : '';
         if (!flow) return;
         $('#hud-level').textContent = `Level ${flow.level}`;
         $('#hud-name').textContent = flow.label;
       },
       progress(i, n) {
         const p = $('#hud-progress'); if (!p) return;
+        const was = n === p._n ? p._i : i; p._i = i; p._n = n;
+        if (n > 8) { // long rounds: a compact bar + count instead of a row of dots
+          const old = p.querySelector('.pbar b'); const from = old ? old.style.width : '0%';
+          p.innerHTML = `<span class="pbar"><b style="width:${from}"></b></span><span class="pn">${i}/${n}</span><span class="sr">${i} of ${n} done</span>`;
+          const bar = p.querySelector('.pbar b'); bar.offsetWidth; bar.style.width = (100 * i / n) + '%';
+          if (i > was) { BSC.Anim.fromTo(p.querySelector('.pn'), { scale: 1.6 }, { scale: 1, duration: 0.5, ease: 'back.out(3)' }); const [x, y] = BSC.Anim.centre(bar.parentNode); BSC.Anim.burst(x - 75 + 150 * (i / n), y, 'cyan', 6); }
+          return;
+        }
         p.innerHTML = n ? Array.from({ length: n }, (_, j) => `<i class="${j < i ? 'on' : ''}${j === i ? ' cur' : ''}"></i>`).join('') + `<span class="sr">${i} of ${n} done</span>` : '';
+        if (i > was) {
+          const dots = $$('i', p).slice(was, i);
+          BSC.Anim.fromTo(dots, { scale: 2.2 }, { scale: 1, duration: 0.5, ease: 'back.out(3)', stagger: 0.08 });
+          dots.forEach((d) => { const [x, y] = BSC.Anim.centre(d); BSC.Anim.burst(x, y, 'cyan', 6); });
+        }
+      },
+      /** +1 bolt: a ⚡ flies from the feedback strip to the HUD counter, which bumps. */
+      reward(fromEl) {
+        const s = BSC.Store.get(); s.bolts = (s.bolts || 0) + 1; BSC.Store.save();
+        const n = $('#hud-bolt-n'), pill = $('#hud-bolts');
+        const land = () => { n.textContent = s.bolts; BSC.Anim.fromTo(pill, { scale: 1.35 }, { scale: 1, duration: 0.5, ease: 'back.out(3)' }); BSC.Audio.play('star'); };
+        if (BSC.Anim.reduced || !fromEl || $('#hud').hidden) { land(); return; }
+        const [x0, y0] = BSC.Anim.centre(fromEl), [x1, y1] = BSC.Anim.centre($('.bi', pill));
+        const b = el('i', 'flybolt', '⚡'); $('#fx').appendChild(b); gsap.set(b, { left: x0, top: y0 });
+        BSC.Anim.burst(x0, y0, 'star', 8);
+        gsap.timeline({ onComplete: () => { b.remove(); land(); } })
+          .fromTo(b, { scale: 0 }, { scale: 1.3, duration: 0.25, ease: 'back.out(3)' })
+          .to(b, { left: x1, duration: 0.7, ease: 'power1.inOut' }, 0.3)
+          .to(b, { top: y1, duration: 0.7, ease: 'back.in(1.4)' }, 0.3)
+          .to(b, { scale: 0.6, duration: 0.2 }, 0.8);
       },
       setHint(fn) { UI.hud._hint = fn; const b = $('#hud-hint'); if (b) b.hidden = !fn; },
     },

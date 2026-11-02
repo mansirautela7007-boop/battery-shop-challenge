@@ -9,6 +9,7 @@
     resume: null,           // { scene, step } where to continue
     stars: {},              // level-2 orders: best stars per order index
     firstTry: {},           // level-3 rounds right on first try
+    bolts: 0,               // ⚡ collected: one per correct answer (shown in the HUD)
     settings: { sound: true, music: true },
   });
   let data = fresh();

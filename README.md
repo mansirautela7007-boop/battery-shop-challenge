@@ -26,11 +26,25 @@ It works best in landscape. The 1280×720 stage scales to fit any screen.
 - **Level 2:** use the arrow buttons, the keyboard arrows, a swipe on the maze, or tap any path tile, gate or the shop (the bot walks there).
 - **💡 Hint** gives the next clue for the current task.
 - **❚❚ Pause (or Esc)** opens Resume, Replay this part, Levels, Sound, Music and Calm motion.
-- **Progress** saves automatically in the browser. The title screen shows **Continue**, and **Levels** lets you replay a level or reset progress.
+- **Progress** saves automatically in the browser. The title screen always shows **Play**, which starts from the story, and returning players also get **Levels** to jump to an unlocked level or reset progress.
 
 ## QA jump menu
 
-The orange **QA** tab on the right edge of the stage opens a menu that jumps straight to any story, learn or play scene, or to a single play item (A1–A15, Order 1–8, Tutorial and Rounds 1–10). It also unlocks all levels on the Levels screen. To ship without it, delete the `js/ui/qa.js` script line in `index.html`.
+The small orange **QA** tab at the top centre of the stage opens a menu that jumps straight to any story, learn or play scene, or to a single play item (A1–A15, Order 1–8, Tutorial and Rounds 1–10). It also unlocks all levels on the Levels screen. To ship without it, delete the `js/ui/qa.js` script line in `index.html`.
+
+## Look and feel
+
+- **Sticker style:** white cards with a chunky bottom edge on a light play backdrop (soft shapes that drift slowly). The colour tokens are at the top of `css/style.css`.
+- **Colours:** each level has its own accent (Level 1 tangerine, Level 2 mint, Level 3 coral), set from `#stage[data-level]`. Grape is used for tools, sun-yellow for hints and rewards, sky-blue for selection. Batteries follow the station artwork: navy empty parts and cyan charged parts.
+- **Station scenes:** the illustrated rooms are brightened in CSS so they look light and airy. Each slot's fraction plate sits inside its charger's opening, with no card behind the slot.
+- **Speech bubbles:** in story scenes, a line from a character who is on stage appears as a white, lavender-bordered bubble just above their head (`Dialog.floatAt`). Narrator and unnamed bot lines stay in the bottom panel.
+- **Bolts ⚡:** every correct answer sends a bolt flying from the feedback strip to the HUD counter. The total is saved (`bolts` in the store).
+- **Micro-animations:** buttons lift on hover and squash on press, and the main button has a shine sweep. Also animated:
+  - the hint bulb wiggles;
+  - the speaker's portrait bobs while their line plays;
+  - progress dots pop, and rounds with more than 8 items show a filling bar instead of dots;
+  - badges spin in, wrong answers shake the feedback strip, and screens fade in.
+- **Calm motion:** Calm motion (in Pause) and the system's reduced-motion setting turn off every looping decoration.
 
 ## Project structure
 
@@ -68,7 +82,7 @@ assets/               optimised artwork (WebP) + fonts (SIL OFL)
 
 | Asset | Decision |
 |---|---|
-| Characters (Ira ×8, Byte ×9, Duster ×3, 8 bots) | Used. Pose swaps and movement with GSAP. Duster gets the hologram look in CSS. Fractions show on the bots' blank chest screens in HTML. |
+| Characters (Ira ×7 used; `ira_console` removed, Byte ×9, Duster ×3, 8 bots) | Used. Pose swaps and movement with GSAP. Duster gets the hologram look in CSS. Fractions show on the bots' blank chest screens in HTML. |
 | `bot_zip_happy`, `bot_volt_happy` (not generated) | Neutral pose plus a hop animation. |
 | Backgrounds (7) | Used. Station evening (missing) = the morning station with a CSS evening tint. |
 | `battery_circle`, `battery_square`, `battery_triangle` | Used as casings. An exact SVG region sits inside each painted window. |

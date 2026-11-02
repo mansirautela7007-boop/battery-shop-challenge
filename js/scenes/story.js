@@ -6,7 +6,7 @@
   /** Story Skip control (top-right under the HUD). */
   function skipButton(ctx, target) {
     const b = UI.button('Skip story ▸▸', { variant: 'ghost', onClick: () => Game.go(target) });
-    b.style.cssText = 'position:absolute;right:22px;top:80px;z-index:27;';
+    b.style.cssText = 'position:absolute;right:214px;top:15px;z-index:31;min-height:46px;';
     UI.world().appendChild(b);
   }
   /** Primary in-scene button (e.g. "Call Professor Duster") that the story waits for. */
@@ -19,17 +19,18 @@
 
   // ---------------------------------------------------------------- Prologue
   BSC.Scenes.prologue = async function (ctx) {
+    ctx.auto = true; // continuous story: lines advance by themselves
     UI.setBg('bg_station_morning');
     skipButton(ctx, 'l1learn');
     const w = UI.world();
     const rail = UI.el('img'); rail.src = 'assets/props/l1_platform_rail.webp'; rail.alt = '';
     rail.style.cssText = 'position:absolute;left:340px;top:455px;width:760px;z-index:1;';
     w.appendChild(rail);
-    const row = UI.el('div'); row.style.cssText = 'position:absolute;left:370px;top:180px;width:700px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;z-index:2;';
+    const row = UI.el('div'); row.style.cssText = 'position:absolute;left:360px;top:205px;width:720px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;z-index:2;';
     const fr = [[1, 2], [2, 4], [3, 6], [4, 8]];
-    const slots = fr.map(([n, d]) => { const s = Parts.slot({ shape: 'circle', d, n, width: 130, label: false }); row.appendChild(s); return s; });
+    const slots = fr.map(([n, d]) => { const s = Parts.slot({ shape: 'circle', d, n, width: 150, label: false }); row.appendChild(s); return s; });
     w.appendChild(row);
-    Cast.add('ira', { char: 'ira', pose: 'console', x: 180, bottom: 110, h: 430 }); Cast.idle('ira');
+    Cast.add('ira', { char: 'ira', pose: 'idle', x: 180, bottom: 110, h: 430 }); Cast.idle('ira');
     await ctx.play(Anim.from(row.children, { y: 40, opacity: 0, stagger: 0.12, duration: 0.5 }));
 
     await ctx.say('Narrator', 'Welcome to the bot charging station.');
@@ -40,12 +41,12 @@
     await ctx.say('Ira', 'Each slot shows its charge. I will make sure every bot gets the right charge.', { actor: 'ira', pose: 'talk' });
     // 4: bots roll in
     const crew = ['zip', 'bolt', 'pixel', 'spark', 'nova'];
-    crew.forEach((c, i) => { Cast.add('q' + i, { char: c, pose: 'neutral', x: 1240 + i * 30, bottom: 120, h: 170, cls: 'small' }); Cast.screen('q' + i, UI.frac(1, 2)); });
+    crew.forEach((c, i) => { Cast.add('q' + i, { char: c, pose: 'neutral', x: 1240 + i * 30, bottom: 80, h: 170, cls: 'small' }); Cast.screen('q' + i, UI.frac(1, 2)); });
     BSC.Audio.play('roll');
     await ctx.play(gsap.to(crew.map((_, i) => Cast.get('q' + i)), { left: (i) => 760 + i * 92, duration: Anim.reduced ? 0.01 : 1, stagger: 0.12, ease: 'power2.out' }));
     await ctx.say('Bot', 'Beep! I need half a charge. Everyone here needs 1/2!');
     // 5: Byte scans
-    Cast.add('byte', { char: 'byte', pose: 'scan', x: 1130, bottom: 330, h: 190 });
+    Cast.add('byte', { char: 'byte', pose: 'scan', x: 1150, bottom: 420, h: 170 });
     await ctx.play(Cast.enter('byte', 'right')); Cast.idle('byte');
     slots.forEach((s) => s.classList.add('demo'));
     await ctx.say('Byte', 'Scanning!', { actor: 'byte' });
@@ -60,7 +61,7 @@
     w.appendChild(bar);
     await ctx.play(gsap.to(crew.map((_, i) => Cast.get('q' + i)), { left: (i) => 440 + i * 70, duration: Anim.reduced ? 0.01 : 0.9, stagger: 0.08 }));
     await ctx.say('Byte', 'Bots! Line up at the 1/2 slot.', { actor: 'byte' });
-    ['gizmo', 'rivet'].forEach((c, k) => { const i = crew.length + k; Cast.add('q' + i, { char: c, pose: 'neutral', x: 1300, bottom: 120, h: 170, cls: 'small' }); Cast.screen('q' + i, UI.frac(1, 2)); });
+    ['gizmo', 'rivet'].forEach((c, k) => { const i = crew.length + k; Cast.add('q' + i, { char: c, pose: 'neutral', x: 1300, bottom: 80, h: 170, cls: 'small' }); Cast.screen('q' + i, UI.frac(1, 2)); });
     await ctx.play(gsap.to([Cast.get('q5'), Cast.get('q6')], { left: (i) => 790 + i * 70, duration: Anim.reduced ? 0.01 : 0.9, stagger: 0.15 }));
     await ctx.say('Narrator', 'The line gets longer…');
     await ctx.say('Bot', 'Beep… still waiting.');
@@ -80,9 +81,9 @@
     // 11: overlay proof
     await waitButton(ctx, 'Put 2/4 on top of 1/2');
     await ctx.lock(async () => {
-      const copy = Battery.create({ shape: 'circle', d: 4, n: 2, width: 130 }); copy.classList.add('see');
+      const copy = Battery.create({ shape: 'circle', d: 4, n: 2, width: 150 }); copy.classList.add('see');
       const a = slots[1]._batt.getBoundingClientRect(), b = slots[0]._batt.getBoundingClientRect(), s = document.getElementById('stage').getBoundingClientRect(), k = UI.scale();
-      copy.style.cssText = `position:absolute;z-index:20;width:130px;left:${(a.left - s.left) / k}px;top:${(a.top - s.top) / k}px`;
+      copy.style.cssText = `position:absolute;z-index:20;width:150px;left:${(a.left - s.left) / k}px;top:${(a.top - s.top) / k}px`;
       w.appendChild(copy);
       await ctx.play(Anim.to(copy, { left: (b.left - s.left) / k, top: (b.top - s.top) / k - 60, duration: 0.7, ease: 'power2.inOut' }));
       await ctx.play(Anim.to(copy, { top: (b.top - s.top) / k, duration: 0.45, ease: 'bounce.out' }));
@@ -90,7 +91,7 @@
     });
     await ctx.say('Duster', 'See? The charged parts match exactly.', { actor: 'duster' });
     // 12
-    Cast.add('byte', { char: 'byte', pose: 'confused', x: 960, bottom: 330, h: 170 }); Cast.enter('byte', 'up');
+    Cast.add('byte', { char: 'byte', pose: 'confused', x: 330, bottom: 440, h: 150 }); Cast.enter('byte', 'up');
     await ctx.say('Duster', 'Different numbers. Same charge.', { actor: 'duster', pose: 'explain' });
     await ctx.say('Byte', 'But the numbers are bigger!', { actor: 'byte' });
     await ctx.say('Duster', "Let's find out why. Come to my bench!", { actor: 'duster', pose: 'point', next: 'Start learning' });
@@ -99,6 +100,7 @@
 
   // ---------------------------------------------------------------- Shop intro (before Level 2)
   BSC.Scenes.shopIntro = async function (ctx) {
+    ctx.auto = true; // continuous story: lines advance by themselves
     UI.setBg('bg_battery_shop');
     skipButton(ctx, 'l2learn');
     const w = UI.world();
@@ -124,7 +126,7 @@
     w.appendChild(order); Anim.pop(order);
     await ctx.say('Bot', 'I need an 8/12 battery, please!');
     Cast.add('byte', { char: 'byte', pose: 'scan', x: 1020, bottom: 300, h: 190 }); await ctx.play(Cast.enter('byte', 'right')); Cast.idle('byte');
-    const sign = UI.el('div', 'sign', 'OUT OF STOCK: 12-piece batteries'); sign.style.cssText += 'left:330px;top:150px;'; w.appendChild(sign); Anim.pop(sign); BSC.Audio.play('wrong');
+    const sign = UI.el('div', 'sign', 'OUT OF STOCK: 12-piece batteries'); sign.style.cssText += 'left:300px;top:468px;'; w.appendChild(sign); Anim.pop(sign); BSC.Audio.play('wrong');
     await ctx.say('Byte', 'No 12-piece batteries. Out of stock! Sorry, bot. We can’t help.', { actor: 'byte', pose: 'oops' });
     await ctx.play(gsap.to(Cast.get('bot'), { x: -60, duration: 0.6 }));
     Cast.add('ira', { char: 'ira', pose: 'point', x: 1110, bottom: 100, h: 430 }); await ctx.play(Cast.enter('ira', 'right'));
@@ -139,6 +141,7 @@
 
   // ---------------------------------------------------------------- Delivery intro (before Level 3)
   BSC.Scenes.gateIntro = async function (ctx) {
+    ctx.auto = true; // continuous story: lines advance by themselves
     UI.setBg('bg_delivery_gate');
     skipButton(ctx, 'l3learn');
     const w = UI.world();
@@ -164,6 +167,7 @@
 
   // ---------------------------------------------------------------- Finale
   BSC.Scenes.finale = async function (ctx) {
+    ctx.auto = true; // continuous story: lines advance by themselves
     UI.setBg('bg_station_morning', { tint: 'evening' });
     const w = UI.world();
     const row = UI.el('div'); row.style.cssText = 'position:absolute;left:370px;top:200px;width:700px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;';

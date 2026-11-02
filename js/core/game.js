@@ -38,6 +38,7 @@
       document.body.classList.remove('busy');
       if (BSC.Anim) BSC.Anim.killAll();
       BSC.UI.resetStage();
+      BSC.Anim.fromTo('#world', { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power1.out' });
       const scene = BSC.Scenes[id];
       if (!scene) { console.error('Unknown scene', id); return; }
       Game.state = ['title', 'levels'].includes(id) ? id : 'scene';
@@ -69,9 +70,21 @@
     /** Dialogue. wait=true shows a Next button and resolves on press. */
     async say(who, text, opts = {}) {
       this.check();
-      const p = BSC.Dialog.say(who, text, opts);
+      const auto = this.auto && opts.wait !== false;
+      const p = BSC.Dialog.say(who, text, Object.assign({}, opts, auto ? { auto: true, float: !!opts.actor && this.float !== false } : {}));
       if (opts.wait === false) return;
-      await p; this.check();
+      if (!auto) { await p; this.check(); return; }
+      // Continuous scene (ctx.auto, used by the story): no Next. Move on when the voice ends, or after a reading pause.
+      const spoken = await BSC.Dialog.voiceDone; this.check();
+      const words = String(text).split(/\s+/).length;
+      await this.hold(spoken ? 0.6 : Math.max(2.2, 1.2 + words * 0.32));
+    }
+    /** Like wait(), but never shortened by Calm motion (used for reading time). */
+    hold(seconds) {
+      return new Promise((resolve, reject) => {
+        if (!this.alive) return reject(new Abort());
+        BSC.Anim.delay(seconds, () => (this.alive ? resolve() : reject(new Abort())));
+      });
     }
     /** Resolve when the user activates el (one time). */
     tap(el) {

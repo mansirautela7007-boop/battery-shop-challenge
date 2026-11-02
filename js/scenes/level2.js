@@ -8,7 +8,7 @@
   function chargeBar(value, label) {
     const w = UI.el('div'); w.style.cssText = 'position:relative;width:62px;height:198px;display:grid;justify-items:center;';
     w.innerHTML = `<img src="assets/batteries/charge_bar_frame.webp" alt="" style="width:62px;height:198px;position:absolute;inset:0">
-      <div class="cbfill" style="position:absolute;left:23.8%;right:24.1%;bottom:10.2%;height:78.2%;transform-origin:50% 100%;transform:scaleY(${value});background:linear-gradient(180deg,#8ff4ff,#14b2df);border-radius:6px;box-shadow:0 0 12px rgba(69,227,255,.6)"></div>
+      <div class="cbfill" style="position:absolute;left:23.8%;right:24.1%;bottom:10.2%;height:78.2%;transform-origin:50% 100%;transform:scaleY(${value});background:linear-gradient(180deg,#9ef6ff,#45e3ff 55%,#1fb6e6);border-radius:6px;box-shadow:0 0 12px rgba(69,227,255,.6)"></div>
       ${label ? `<div style="position:absolute;top:204px;white-space:nowrap;font-family:var(--f-display);font-weight:700;font-size:17px;color:var(--muted)">${label}</div>` : ''}`;
     w._set = (v) => Anim.to(w.querySelector('.cbfill'), { scaleY: v, duration: 0.5 });
     return w;
@@ -16,7 +16,7 @@
 
   // ------------------------------------------------------------ Level 2 Learn
   BSC.Scenes.l2learn = async function (ctx, params) {
-    UI.setBg('bg_learning_bench');
+    UI.setBg(null, { tint: 'plain' });
     Learn.duster();
     const steps = [
       // Beats 1–7: the Merger on 8/12
@@ -177,7 +177,7 @@
   }
 
   BSC.Scenes.l2game = async function (ctx, params) {
-    UI.setBg('bg_battery_shop', { tint: 'dim' });
+    UI.setBg(null, { tint: 'plain' });
     const S = BSC.Store.get();
     for (let i = params.step || 0; i < Levels.L2.length; i++) {
       ctx.save(i); UI.hud.progress(i, Levels.L2.length);
@@ -234,8 +234,8 @@
       const batt = Battery.create({ shape: L.shape, d: cur[1], n: cur[0], width: L.shape === 'rect' || L.shape === 'diamond' ? 230 : 170 });
       side.appendChild(batt);
       const now = UI.el('div', 'route'); side.appendChild(now);
-      const rec = UI.el('div'); rec.style.cssText = 'position:relative;width:210px;';
-      rec.innerHTML = `<img src="assets/props/l2_record_board.webp" alt="" style="width:210px;display:block"><div style="position:absolute;left:12%;right:12%;top:20%;bottom:30%;display:grid;place-items:center;text-align:center;line-height:1.1;font-family:var(--f-display);font-weight:800;font-size:17px">Byte’s record<br><span style="color:var(--cyan);font-size:22px">${L.record} gate${L.record > 1 ? 's' : ''}</span></div>`;
+      const rec = UI.el('div', 'record-card');
+      rec.innerHTML = `Byte’s record<b>${L.record} gate${L.record > 1 ? 's' : ''}</b>`;
       side.appendChild(rec);
       const starsEl = UI.el('div', 'stars'); side.appendChild(starsEl);
       const dpad = UI.el('div', 'dpad'); dpad.style.cssText = 'position:absolute;left:836px;top:420px;z-index:7;';
@@ -243,7 +243,7 @@
       w.appendChild(dpad);
       const paint = () => {
         BSC.__cur = cur; // test hook (read-only)
-        now.innerHTML = `Route: ${UI.frac(L.order[0], L.order[1], 'in')}${route.map((s) => `<span style="color:var(--warn)">→ ÷${s.k} →</span>${UI.frac(s.n, s.d, 'in')}`).join('')}`;
+        now.innerHTML = `Route: ${UI.frac(L.order[0], L.order[1], 'in')}${route.map((s) => `<span style="color:var(--warn-ink)">→ ÷${s.k} →</span>${UI.frac(s.n, s.d, 'in')}`).join('')}`;
         const s = liveStars(); starsEl.innerHTML = '★'.repeat(s) + `<span class="off">${'★'.repeat(3 - s)}</span>`; starsEl.setAttribute('aria-label', `${s} stars`);
         gateEls.forEach((g, i) => { g.classList.toggle('used', used.has(i)); g.classList.toggle('fits', !used.has(i) && (mistakes >= 3 || hintRung >= 2) && fits(L.gates[i])); });
       };
@@ -353,8 +353,8 @@
       }
       function deadEnd() {
         busyPanel = true;
-        const panel = UI.el('div', 'panel'); panel.style.cssText = 'left:120px;top:170px;width:720px;z-index:20;display:grid;justify-items:center;gap:10px;border-color:var(--warn);';
-        panel.innerHTML = `<h3 style="color:var(--warn)">No gate left fits ${UI.frac(cur[0], cur[1], 'in')}</h3><div style="font-size:19px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center">${L.gates.map((k, j) => used.has(j) ? '' : `<span>÷${k}: ${cur[0]} ${cur[0] % k ? '✗' : '✓'} · ${cur[1]} ${cur[1] % k ? '✗' : '✓'}</span>`).join('')}</div><p style="margin:0;font-size:19px;color:var(--muted)">Tip: a bigger gate first can save you a step.</p>`;
+        const panel = UI.el('div', 'panel'); panel.style.cssText = 'left:120px;top:170px;width:720px;z-index:20;display:grid;justify-items:center;gap:10px;border-color:var(--warn-ink);';
+        panel.innerHTML = `<h3 style="color:var(--warn-ink)">No gate left fits ${UI.frac(cur[0], cur[1], 'in')}</h3><div style="font-size:19px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center">${L.gates.map((k, j) => used.has(j) ? '' : `<span>÷${k}: ${cur[0]} ${cur[0] % k ? '✗' : '✓'} · ${cur[1]} ${cur[1] % k ? '✗' : '✓'}</span>`).join('')}</div><p style="margin:0;font-size:19px;color:var(--muted)">Tip: a bigger gate first can save you a step.</p>`;
         w.appendChild(panel); Anim.pop(panel);
         ctx.say('Duster', 'No gate left fits. Undo your last gate and try a bigger one first.', { wait: false });
         UI.actions([

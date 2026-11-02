@@ -9,9 +9,16 @@
       const wrap = UI().el('div', 'slot');
       const b = BSC.Battery.create({ shape, d, n, cols, width });
       wrap.appendChild(b);
-      if (base) { const img = UI().el('img', 'slot-base'); img.src = 'assets/batteries/slot_charger.webp'; img.alt = ''; img.style.width = Math.round(width * 1.05) + 'px'; wrap.appendChild(img); }
+      // The fraction plate sits inside the charger's opening (as in the station artwork).
+      let dock = wrap;
+      if (base) {
+        const cw = Math.round(width * 1.05);
+        dock = UI().el('div', 'slot-dock'); dock.style.width = cw + 'px'; dock.style.setProperty('--cw', cw + 'px');
+        const img = UI().el('img', 'slot-base'); img.src = 'assets/batteries/slot_charger.webp'; img.alt = ''; dock.appendChild(img);
+        wrap.appendChild(dock);
+      }
       const lab = UI().el('div', 'label-plate' + (label ? '' : ' dim'), label ? UI().frac(n, d) : '?');
-      if (label !== null) wrap.appendChild(lab);
+      if (label !== null) dock.appendChild(lab);
       wrap._batt = b; wrap._label = lab;
       return wrap;
     },

@@ -5,6 +5,14 @@
 (function (BSC) {
   'use strict';
   BSC.Voices = {
+    "Duster|This circle shows 1 out of 2 equal parts, which we write as 1/2.": "l1cut_01_duster.m4a",
+    "Duster|Let’s cut each part into 2 equal pieces. Choose how many pieces to make from each part.": "l1cut_02_duster.m4a",
+    "Duster|Great! Each half is now cut into 2 pieces. Now we have 4 equal parts.": "l1cut_03_duster.m4a",
+    "Duster|Two out of four parts are shaded. The shaded amount is the same!": "l1cut_04_duster.m4a",
+    "Duster|These fractions are equivalent. 1/2 equals 1 times 2 over 2 times 2, which is 2/4.": "l1cut_05_duster.m4a",
+    "Duster|Let’s try ×3. Each half will be cut into 3 pieces.": "l1cut_06_duster.m4a",
+    "Duster|Now try ×4. Each half will be cut into 4 pieces.": "l1cut_07_duster.m4a",
+    "Duster|When we cut each part into equal pieces, the shaded amount stays the same.": "l1cut_08_duster.m4a",
     "Narrator|Welcome to the bot charging station.": "p01_narrator.mp3",
     "Narrator|Today, Ira is in charge.": "p02_narrator.mp3",
     "Ira|Each slot shows its charge. I will make sure every bot gets the right charge.": "p03_ira.mp3",
@@ -35,9 +43,6 @@
     "Duster|Great work today!": "story_12_duster.m4a",
     "Byte|Bigger numbers don’t always mean more charge. I get it now!": "story_13_byte.m4a",
     "Ira|Thank you for helping us. See you next time!": "story_14_ira.m4a",
-    "Duster|Let’s see why they match. Tap ×2 to cut every part into 2.": "level1_01_duster.m4a",
-    "Duster|Count the pieces each time. The charged part never moves.": "level1_02_duster.m4a",
-    "Duster|×2 gives 2/4. ×3 gives 3/6. ×4 gives 4/8. The same number multiplies the top and the bottom.": "level1_03_duster.m4a",
     "Duster|Now join the pieces. Tap ÷2 to join every 2 pieces into 1.": "level1_04_duster.m4a",
     "Duster|Fewer pieces. Same charge. Tap ÷2 again.": "level1_05_duster.m4a",
     "Duster|÷2 gives 2/4. ÷2 again gives 1/2. The same number divides the top and the bottom.": "level1_06_duster.m4a",

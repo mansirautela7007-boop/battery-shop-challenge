@@ -22,20 +22,25 @@
 
   let resolver = null;
   const Dialog = {
-    /** Show a line. wait:false → instruction mode (no Next button). Returns a promise for Next. */
-    say(who, text, { wait = true, next = 'Next', actor = null, pose = null } = {}) {
+    /** Show a line. wait:false → instruction mode (no Next button). auto:true → story line with no Next button
+        (the caller advances it; Dialog.voiceDone resolves when the voice ends). Returns a promise for Next. */
+    say(who, text, { wait = true, auto = false, next = 'Next', actor = null, pose = null, float = false } = {}) {
       const d = document.getElementById('dialog');
       const p = PORTRAIT[who];
       d.hidden = false;
       d.className = 'who-' + who.toLowerCase() + (wait ? '' : ' instr');
       d.innerHTML = `<div class="portrait${p && p.holo ? ' holo' : ''}" aria-hidden="true" style="${p ? `background-image:url(assets/${p.img}.webp);background-size:${p.size};background-position:${p.pos}` : ''}">${p ? '' : '<span class="narr">✦</span>'}</div>
         <div class="bubble"><div class="name">${NAMES[who] || who}</div><div class="text" aria-live="polite">${UI().fmt(text)}</div></div>
-        ${wait ? `<button type="button" class="btn primary next" id="dlg-next">${next} ▸</button>` : ''}`;
-      BSC.Anim.fromTo(d.querySelector('.bubble'), { y: 10, opacity: 0.2 }, { y: 0, opacity: 1, duration: 0.28 });
+        ${wait && !auto ? `<button type="button" class="btn primary next" id="dlg-next">${next} ▸</button>` : ''}`;
+      BSC.Anim.fromTo(d.querySelector('.bubble'), { y: 12, scale: 0.96, opacity: 0.2, transformOrigin: '0% 100%' }, { y: 0, scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(2)' });
       if (actor) BSC.Cast.talk(actor, pose);
-      BSC.Audio.voice(who, text);
+      d.style.left = d.style.top = '';
+      if (float && actor && Cast.get(actor)) Dialog.floatAt(d, Cast.get(actor));
+      Dialog.voiceDone = BSC.Audio.voice(who, text);
+      const face = d.querySelector('.portrait'); face.classList.add('talking'); // bobs while the line is spoken
+      Dialog.voiceDone.then(() => face.classList.remove('talking'));
       if (resolver) { const r = resolver; resolver = null; r(); }
-      if (!wait) return Promise.resolve();
+      if (!wait || auto) return Promise.resolve();
       return new Promise((res) => {
         resolver = res;
         const b = document.getElementById('dlg-next');
@@ -44,13 +49,23 @@
         setTimeout(() => { if (document.activeElement === document.body || !document.activeElement) b.focus({ preventScroll: true }); }, 50);
       });
     },
+    /** Story mode: show the line as a speech bubble beside the speaker's head (tail pointing at it). */
+    floatAt(d, el) {
+      const W = 460, cx = el.offsetLeft, top = el.offsetTop; // left = centre (xPercent -50); layout values ignore entrance tweens
+      const right = cx < 640; // speaker on the left → bubble goes up-right, and the other way round
+      d.classList.add('float'); d.classList.toggle('tail-r', !right);
+      const h = d.offsetHeight;
+      const x = Math.max(16, Math.min(1264 - W, right ? cx - 10 : cx + 10 - W));
+      const y = Math.max(76, Math.min(560 - h, top - h - 8)); // just above the head
+      d.style.left = x + 'px'; d.style.top = y + 'px';
+    },
     hide() { const d = document.getElementById('dialog'); d.hidden = true; d.innerHTML = ''; resolver = null; BSC.Audio.stopVoice(); },
   };
 
   // ---------------- Cast: actors on stage ----------------
   // Poses that exist as files. Missing combos fall back gracefully (e.g. Zip/Volt have no "happy" image).
   const POSES = {
-    ira: ['idle', 'talk', 'point', 'think', 'console', 'handover', 'cheer', 'wave'],
+    ira: ['idle', 'talk', 'point', 'think', 'handover', 'cheer', 'wave'],
     byte: ['hover', 'scan', 'whistle', 'worried', 'confused', 'nod', 'point', 'cheer', 'oops'],
     duster: ['explain', 'point', 'wave'],
   };

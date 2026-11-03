@@ -7,10 +7,11 @@
 
   // ------------------------------------------------------------ Learn
   BSC.Scenes.l3learn = async function (ctx, params) {
-    UI.setBg(null, { tint: 'plain' });
+    ctx.auto = true; // no Next buttons in the lesson: lines move on after the voice
+    UI.setBg('bg_level3', { tint: 'faded' });
     const pair = (a, bf) => {
       const area = Learn.area(130);
-      const r = Learn.row(area, 60);
+      const r = Learn.row(area, 60); r.style.alignItems = 'flex-start'; // Zip and Bolt line up even when a tool sits under Zip
       const A = Learn.big(r, { shape: 'rect', d: a[1], n: a[0], cols: a[1], width: 300 });
       const B = Learn.big(r, { shape: 'rect', d: bf[1], n: bf[0], cols: bf[1], width: 300 });
       A.insertAdjacentHTML('afterbegin', '<div class="label-plate dim" style="font-size:20px">Zip</div>');
@@ -19,10 +20,9 @@
     };
     const steps = [
       async (ctx) => {
-        Cast.add('ira', { char: 'ira', pose: 'talk', x: 1150, bottom: 150, h: 380 }); Cast.enter('ira', 'right'); Cast.idle('ira');
-        Cast.add('byte', { char: 'byte', pose: 'confused', x: 130, bottom: 430, h: 140 }); Cast.enter('byte', 'up');
+        Cast.add('byte', { char: 'byte', pose: 'confused', x: 130, bottom: 40, h: 140 }); Cast.enter('byte', 'up');
         const { A, B } = pair([3, 5], [6, 10]);
-        await ctx.say('Byte', '6/10 has bigger numbers. Does Bolt have more charge?', { actor: 'byte' });
+        await ctx.say('Byte', '6/10 has bigger numbers. Does Bolt have more charge?', { actor: 'byte', beside: true });
         const tb = Learn.toolbox(A, 'Cut Zip’s pieces', null, ['×2']);
         const stop = Parts.tapHint(tb._btns[0]);
         await ctx.say('Ira', 'Let’s check. Tap ×2.', { wait: false, actor: 'ira' });
@@ -66,7 +66,7 @@
 
   // ------------------------------------------------------------ Play
   BSC.Scenes.l3game = async function (ctx, params) {
-    UI.setBg(null, { tint: 'plain' });
+    UI.setBg('bg_level3', { tint: 'hazy' });
     const S = BSC.Store.get();
     const rounds = Levels.L3;
     for (let i = params.step || 0; i < rounds.length; i++) {
@@ -74,15 +74,20 @@
       if (rounds[i].numbers && !(rounds[i - 1] && rounds[i - 1].numbers)) await screensOff(ctx);
       const first = await playRound(ctx, rounds[i], i);
       if (!rounds[i].tutorial) { S.firstTry[i] = first; BSC.Store.save(); }
-      if (rounds[i].tutorial) { UI.world().innerHTML = ''; await ctx.say('Byte', 'More deliveries! Help me pick each time.', { next: 'Start' }); }
+      if (rounds[i].tutorial) {
+        UI.world().innerHTML = ''; Cast.clear();
+        Cast.add('byte', { char: 'byte', pose: 'cheer', x: 640, bottom: 60, h: 220 }); Cast.enter('byte', 'up'); Cast.idle('byte');
+        await ctx.say('Byte', 'More deliveries! Help me pick each time.', { actor: 'byte', next: 'Start' });
+        UI.world().innerHTML = ''; Cast.clear();
+      }
     }
     UI.hud.progress(rounds.length, rounds.length);
     UI.world().innerHTML = ''; UI.feedback(null);
     const n = Object.values(S.firstTry).filter(Boolean).length;
-    const card = UI.el('div', 'panel'); card.style.cssText = 'left:50%;top:150px;transform:translateX(-50%);text-align:center;width:640px;';
+    const card = UI.el('div', 'panel'); card.style.cssText = 'left:50%;top:100px;transform:translateX(-50%);text-align:center;width:640px;';
     card.innerHTML = `<div class="title-card" style="display:inline-block">Every delivery is sorted!</div><p style="font-size:24px;margin:16px 0 0">Picked right on the first try: <b>${n} of 10</b> rounds</p>`;
     UI.world().appendChild(card); Anim.pop(card);
-    Cast.add('byte', { char: 'byte', pose: 'cheer', x: 640, bottom: 150, h: 210 }); Cast.enter('byte', 'up'); Cast.idle('byte');
+    Cast.add('byte', { char: 'byte', pose: 'cheer', x: 1050, bottom: 40, h: 210 }); Cast.enter('byte', 'up'); Cast.idle('byte');
     await ctx.say('Byte', 'Bigger numbers don’t always mean more charge. Make the pieces the same, then compare!', { actor: 'byte', next: 'Continue' });
     await BSC.levelDone(ctx, 3);
   };
@@ -93,29 +98,32 @@
     box.innerHTML = '<div class="label-plate dim" style="font-size:22px;padding:18px">BATTERY SCREEN OFF</div><div class="label-plate dim" style="font-size:22px;padding:18px">BATTERY SCREEN OFF</div>';
     UI.world().appendChild(box);
     await ctx.play(Anim.fromTo(box.children, { opacity: 1 }, { opacity: 0.3, duration: 0.12, repeat: 5, yoyo: true }));
-    Cast.add('byte', { char: 'byte', pose: 'worried', x: 640, bottom: 150, h: 190 }); Cast.enter('byte', 'up');
+    Cast.add('ira', { char: 'ira', pose: 'talk', x: 380, bottom: 40, h: 340 }); Cast.enter('ira', 'left'); Cast.idle('ira');
+    Cast.add('byte', { char: 'byte', pose: 'worried', x: 1050, bottom: 40, h: 190 }); Cast.enter('byte', 'up');
     await ctx.say('Byte', 'Uh oh! The battery screens are off!', { actor: 'byte' });
-    await ctx.say('Ira', 'You don’t need them. Make the pieces the same in your head. Stuck? The batteries come back as a hint.');
+    await ctx.say('Ira', 'You don’t need them. Make the pieces the same in your head. Stuck? The batteries come back as a hint.', { actor: 'ira', beside: true });
+    UI.world().innerHTML = ''; Cast.clear();
   }
 
   /** One round. Resolves true if the first choice was right. */
   function playRound(ctx, R, idx) {
     return new Promise((resolve, reject) => {
       const w = UI.world(); w.innerHTML = ''; UI.feedback(null); UI.actions([]);
+      UI.$('#stage').dataset.layout = 'duel'; // feedback moves above the cards (see CSS)
       let phase = 'spin', wrong = 0, recut = false;
       const st = { a: 0, b: 0 };
       const sides = {};
       const BW = Battery.wide(R.shape) ? 240 : 170;
       ['a', 'b'].forEach((k) => {
         const [name, n, d] = R[k];
-        const s = UI.el('div', 'duel-side'); s.style.left = k === 'a' ? '170px' : '810px'; s.style.width = '300px'; s.style.top = '96px';
+        const s = UI.el('div', 'duel-side'); s.style.left = k === 'a' ? '200px' : '780px';
         s.innerHTML = `<div class="nm">${name}</div>`;
         w.appendChild(s);
         const bot = name.toLowerCase();
-        Cast.add('bot' + k, { char: bot, pose: 'neutral', x: k === 'a' ? 80 : 1200, bottom: 300, h: 230, flip: k === 'b' && false, cls: 'small' });
+        Cast.add('bot' + k, { char: bot, pose: 'neutral', x: k === 'a' ? 100 : 1180, bottom: 118, h: 270, flip: k === 'b' && false, cls: 'small' });
         const wheel = UI.el('div', 'wheel-wrap'); wheel.innerHTML = '<img class="wheel" src="assets/props/l3_charge_wheel.webp" alt=""><div class="pointer"></div><div class="wfr"><span class="label-plate dim">?</span></div>';
         s.appendChild(wheel);
-        const holder = UI.el('div'); holder.style.cssText = 'display:grid;justify-items:center;gap:8px;min-height:20px;'; s.appendChild(holder);
+        const holder = UI.el('div'); holder.style.cssText = 'display:grid;justify-items:center;gap:8px;'; s.appendChild(holder);
         sides[k] = { el: s, name, n, d, bot, wheel, holder, batt: null };
       });
       const choices = UI.el('div', 'choices'); w.appendChild(choices);
@@ -198,7 +206,7 @@
       }
       function showHintPanel() {
         if (recut) return; recut = true;
-        const p = UI.el('div', 'panel'); p.style.cssText = 'left:50%;top:438px;transform:translateX(-50%);display:flex;gap:26px;align-items:center;z-index:8;padding:8px 16px;';
+        const p = UI.el('div', 'panel'); p.style.cssText = 'left:50%;top:470px;transform:translateX(-50%);display:flex;gap:26px;align-items:center;z-index:8;padding:8px 16px;';
         ['a', 'b'].forEach((k) => {
           const [name, n, d] = R[k]; const m = n * R.hintDen / d;
           const col = UI.el('div'); col.style.cssText = 'display:grid;justify-items:center;gap:4px;';
@@ -221,10 +229,10 @@
             choices.style.display = 'none';
             const hp = w.querySelector('.panel'); if (hp) hp.remove();
             // race: distance ∝ actual charge
-            track.innerHTML = ['a', 'b'].map((k) => `<div class="track" style="top:${k === 'a' ? 452 : 528}px;height:70px"><div class="tick" style="left:25%"></div><div class="tick" style="left:50%"></div><div class="tick" style="left:75%"></div><div class="finish"></div><div class="runner" data-k="${k}"><img src="${Cast.src(sides[k].bot, 'neutral')}" alt="" style="height:66px"><span class="tag" style="opacity:0">${R.ans === '=' ? 'Same charge' : R.ans === k ? 'Takes the trip!' : ''}</span></div></div>`).join('');
+            track.innerHTML = ['a', 'b'].map((k) => `<div class="track" style="top:${k === 'a' ? 488 : 558}px"><div class="tick" style="left:25%"></div><div class="tick" style="left:50%"></div><div class="tick" style="left:75%"></div><div class="finish"></div><div class="runner" data-k="${k}"><img src="${Cast.src(sides[k].bot, 'neutral')}" alt="" style="height:60px"><span class="tag" style="opacity:0">${R.ans === '=' ? 'Same charge' : R.ans === k ? 'Takes the trip!' : ''}</span></div></div>`).join('');
             track.querySelectorAll('.tag').forEach((t) => { if (!t.textContent) t.remove(); });
             BSC.Audio.play('roll');
-            const trackW = 1200 - 160;
+            const trackW = 880 - 160; // track is 880px wide, between the two bots
             await ctx.play(gsap.timeline()
               .to(track.querySelectorAll('.runner'), { x: (i, el) => { const S = sides[el.dataset.k]; return (S.n / S.d) * trackW; }, duration: Anim.reduced ? 0.01 : 1.6, ease: 'power2.out' })
               .to(track.querySelectorAll('.tag'), { opacity: 1, duration: 0.3 }));

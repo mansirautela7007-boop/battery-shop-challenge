@@ -5,7 +5,7 @@
 
   // Which image + crop to use for the round portrait in the dialogue panel.
   const PORTRAIT = {
-    Ira: { img: 'chars/ira_talk', size: '330%', pos: '50% 3%' },
+    Ira: { img: 'chars/ira_talk', size: '140%', pos: '62% -4%' },
     Byte: { img: 'chars/byte_hover', size: '150%', pos: '50% 18%' },
     Zip: { img: 'chars/bot_zip_neutral', size: '260%', pos: '50% 4%' },
     Bolt: { img: 'chars/bot_bolt_neutral', size: '230%', pos: '50% 10%' },
@@ -23,19 +23,27 @@
   const Dialog = {
     /** Show a line. wait:false → instruction mode (no Next button). auto:true → story line with no Next button
         (the caller advances it; Dialog.voiceDone resolves when the voice ends). Returns a promise for Next. */
-    say(who, text, { wait = true, auto = false, next = 'Next', actor = null, pose = null, float = false } = {}) {
+    say(who, text, { wait = true, auto = false, next = 'Next', actor = null, pose = null, float = false, beside = false, mark = null, silent = false } = {}) {
       const d = document.getElementById('dialog');
+      // a line that repeats the feedback on screen keeps its green/red look
+      const raw = d.dataset.fb ? String(d._fbRaw || '').trim() : '', keep = raw && (text.startsWith(raw) || raw.startsWith(text)) ? d.dataset.fb : null;
+      delete d.dataset.fb;
       const p = PORTRAIT[who];
       d.hidden = false;
       d.className = 'who-' + who.toLowerCase() + (wait ? '' : ' instr');
+      const bubble = float && actor && Cast.get(actor);
+      const nextBtn = wait && !auto ? `<button type="button" class="btn primary next" id="dlg-next">${next} ▸</button>` : '';
       d.innerHTML = `<div class="portrait${p && p.holo ? ' holo' : ''}" aria-hidden="true" style="${p ? `background-image:url(assets/${p.img}.webp);background-size:${p.size};background-position:${p.pos}` : ''}">${p ? '' : '<span class="narr">✦</span>'}</div>
-        <div class="bubble"><div class="name">${NAMES[who] || who}</div><div class="text" aria-live="polite">${UI().fmt(text)}</div></div>
-        ${wait && !auto ? `<button type="button" class="btn primary next" id="dlg-next">${next} ▸</button>` : ''}`;
+        <div class="bubble"><div class="name">${NAMES[who] || who}</div><div class="text" aria-live="polite">${UI().fmt(text)}</div>${bubble ? nextBtn : ''}</div>
+        ${bubble ? '' : nextBtn}`;
       BSC.Anim.fromTo(d.querySelector('.bubble'), { y: 12, scale: 0.96, opacity: 0.2, transformOrigin: '0% 100%' }, { y: 0, scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(2)' });
+      if (mark) { const t = d.querySelector('.text'); t.innerHTML = t.innerHTML.replace(new RegExp(`\\b${mark}\\b`), '<mark>$&</mark>'); } // highlight the key word
       if (actor) BSC.Cast.talk(actor, pose);
       d.style.left = d.style.top = '';
-      if (float && actor && Cast.get(actor)) Dialog.floatAt(d, Cast.get(actor));
-      Dialog.voiceDone = BSC.Audio.voice(who, text);
+      if (keep) Dialog.tint(d, keep);
+      if (bubble) Dialog.floatAt(d, bubble, beside);
+      else Dialog.fitLine(d);
+      Dialog.voiceDone = silent ? Promise.resolve(false) : BSC.Audio.voice(who, text);
       const face = d.querySelector('.portrait'); face.classList.add('talking'); // bobs while the line is spoken
       Dialog.voiceDone.then(() => face.classList.remove('talking'));
       if (resolver) { const r = resolver; resolver = null; r(); }
@@ -48,17 +56,58 @@
         setTimeout(() => { if (document.activeElement === document.body || !document.activeElement) b.focus({ preventScroll: true }); }, 50);
       });
     },
+    /** Right / wrong / hint messages show in the instruction box (same speaker), tinted by kind.
+        Clearing puts back the line that was there. Returns the icon (for the reward sparkle). */
+    feedback(kind, html) {
+      const d = document.getElementById('dialog');
+      const shown = !d.hidden && d.querySelector('.text');
+      if (!kind) {
+        if (!shown || !d.dataset.fb) return null;
+        if (d._fbHide) { Dialog.hide(); return null; }
+        const t = d.querySelector('.text'); t.innerHTML = d._saved; t.style.fontSize = ''; t.classList.remove('wrap');
+        d.classList.remove('fb', 'fb-' + d.dataset.fb); delete d.dataset.fb;
+        if (!d.classList.contains('float')) Dialog.fitLine(d);
+        return null;
+      }
+      if (!shown) { Dialog.say('Ira', '', { wait: false, silent: true }); d._fbHide = true; d._saved = ''; }
+      else if (!d.dataset.fb) { d._fbHide = false; d._saved = d.querySelector('.text').innerHTML; }
+      const t = d.querySelector('.text'); t.innerHTML = UI().fmt(html); t.style.fontSize = ''; t.classList.remove('wrap');
+      d._fbRaw = html; Dialog.tint(d, kind);
+      if (!d.classList.contains('float')) Dialog.fitLine(d);
+      BSC.Anim.fromTo(d.querySelector('.bubble'), { scale: 0.97 }, { scale: 1, duration: 0.3, ease: 'back.out(2.2)' });
+      return t.querySelector('.fb-ic');
+    },
+    tint(d, kind) {
+      if (d.dataset.fb) d.classList.remove('fb-' + d.dataset.fb);
+      d.dataset.fb = kind; d.classList.add('fb', 'fb-' + kind);
+      const t = d.querySelector('.text'); const old = t.querySelector('.fb-ic'); if (old) old.remove();
+      t.insertAdjacentHTML('afterbegin', `<span class="fb-ic" aria-hidden="true">${{ ok: '✓', bad: '!', hint: '?', info: 'i', warn: '!' }[kind] || ''}</span>`);
+    },
+    /** Where the panel keeps a line on one row (CSS nowrap), shrink the text until it fits. */
+    fitLine(d) {
+      const t = d.querySelector('.text');
+      if (getComputedStyle(t).whiteSpace !== 'nowrap') return;
+      let fs = parseFloat(getComputedStyle(t).fontSize);
+      while (t.scrollWidth > t.clientWidth && fs > 17) t.style.fontSize = (fs -= 1) + 'px';
+      if (t.scrollWidth > t.clientWidth) { t.style.fontSize = ''; t.classList.add('wrap'); } // still too long: two rows at full size
+    },
     /** Story mode: show the line as a speech bubble beside the speaker's head (tail pointing at it). */
-    floatAt(d, el) {
+    floatAt(d, el, beside = false) {
       const W = 460, cx = el.offsetLeft, top = el.offsetTop; // left = centre (xPercent -50); layout values ignore entrance tweens
       const right = cx < 640; // speaker on the left → bubble goes up-right, and the other way round
       d.classList.add('float'); d.classList.toggle('tail-r', !right);
       const h = d.offsetHeight;
+      if (beside) { // next to the head instead of above it, for screens with content up top
+        d.classList.add('side');
+        const img = el.querySelector('img'), half = (img ? img.getBoundingClientRect().width / UI().scale() : el.offsetWidth) / 2;
+        d.style.left = (right ? cx + half + 6 : cx - half - 6 - W) + 'px'; d.style.top = Math.max(76, Math.min(700 - h, top)) + 'px';
+        return;
+      }
       const x = Math.max(16, Math.min(1264 - W, right ? cx - 10 : cx + 10 - W));
       const y = Math.max(76, Math.min(560 - h, top - h - 8)); // just above the head
       d.style.left = x + 'px'; d.style.top = y + 'px';
     },
-    hide() { const d = document.getElementById('dialog'); d.hidden = true; d.innerHTML = ''; resolver = null; BSC.Audio.stopVoice(); },
+    hide() { const d = document.getElementById('dialog'); d.hidden = true; d.innerHTML = ''; delete d.dataset.fb; resolver = null; BSC.Audio.stopVoice(); },
   };
 
   // ---------------- Cast: actors on stage ----------------
@@ -85,6 +134,11 @@
     rivet: { neutral: [0.332, 0.329, 0.698, 0.609], happy: [0.35, 0.327, 0.674, 0.601] },
     nova: { neutral: [0.346, 0.327, 0.693, 0.569], happy: [0.378, 0.326, 0.642, 0.561] },
   };
+  /** Ira's pointing art points left: mirror it when she stands on the left so she points into the scene. */
+  function face(a) {
+    const img = a.el.querySelector('img');
+    img.style.scale = a.char === 'ira' && a.pose === 'point' && parseFloat(a.el.style.left) < 640 ? '-1 1' : '';
+  }
   function placeChest(a) {
     const c = a.el.querySelector('.chest'); if (!c) return;
     const set = SCREEN[a.char]; const sc = (a.pose === 'happy' && set.happy) || set.neutral;
@@ -108,7 +162,7 @@
       (parent || BSC.UI.world()).appendChild(a);
       gsap.set(a, { xPercent: -50 });
       actors[id] = { el: a, char, pose };
-      placeChest(actors[id]);
+      placeChest(actors[id]); face(actors[id]);
       return a;
     },
     get(id) { return actors[id] && actors[id].el; },
@@ -117,10 +171,10 @@
     pose(id, pose) {
       const a = actors[id]; if (!a || a.pose === pose) return null;
       a.pose = pose; const img = a.el.querySelector('img');
-      if (BSC.Anim.reduced) { img.src = src(a.char, pose); placeChest(a); return null; }
+      if (BSC.Anim.reduced) { img.src = src(a.char, pose); placeChest(a); face(a); return null; }
       return gsap.timeline()
         .to(img, { scaleY: 0.94, scaleX: 1.04, transformOrigin: '50% 100%', duration: 0.08 })
-        .add(() => { img.src = src(a.char, pose); placeChest(a); })
+        .add(() => { img.src = src(a.char, pose); placeChest(a); face(a); })
         .to(img, { scaleY: 1, scaleX: 1, duration: 0.35, ease: 'back.out(3)' });
     },
     enter(id, from = 'fade') {

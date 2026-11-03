@@ -71,7 +71,8 @@
     async say(who, text, opts = {}) {
       this.check();
       const auto = this.auto && opts.wait !== false;
-      const p = BSC.Dialog.say(who, text, Object.assign({}, opts, auto ? { auto: true, float: !!opts.actor && this.float !== false } : {}));
+      // A speaker who is on stage talks in a bubble over their head; everyone else (Narrator, off-stage hints) uses the bottom panel.
+      const p = BSC.Dialog.say(who, text, Object.assign({}, opts, { float: !!opts.actor && this.float !== false }, auto ? { auto: true } : {}));
       if (opts.wait === false) return;
       if (!auto) { await p; this.check(); return; }
       // Continuous scene (ctx.auto, used by the story): no Next. Move on when the voice ends, or after a reading pause.

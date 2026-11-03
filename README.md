@@ -23,10 +23,10 @@ It works best in landscape. The 1280×720 stage scales to fit any screen.
 ## Controls
 
 - **Next ▸** continues dialogue. Enter or Space works on a focused button.
-- **Level 1:** drag the bot onto a slot, or tap the bot and then tap a slot. With a keyboard, press Enter on the bot, then Enter on a slot.
+- **Level 1:** in questions 1–2 the child drags the bot along a conveyor belt; the charger it is under lights up, and letting go picks it (a wrong pick rolls the bot back). From question 3 it is free drag and drop onto a charger. You can also tap the bot and then tap a charger, or use Enter on the bot and then on a charger.
 - **Level 2:** use the arrow buttons, the keyboard arrows, a swipe on the maze, or tap any path tile, gate or the shop (the bot walks there).
-- **💡 Hint** gives the next clue for the current task.
-- **❚❚ Pause (or Esc)** opens Resume, Replay this part, Levels, Sound, Music and Calm motion.
+- **Header:** only the sound toggle. Clues appear by themselves after wrong answers.
+- **Esc** opens Pause: Resume, Replay this part, Levels, Sound, Music and Calm motion.
 - **Progress** saves automatically in the browser. The title screen always shows **Play**, which starts from the story, and returning players also get **Levels** to jump to an unlocked level or reset progress.
 
 ## QA jump menu

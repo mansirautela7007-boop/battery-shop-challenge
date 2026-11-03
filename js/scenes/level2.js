@@ -16,7 +16,8 @@
 
   // ------------------------------------------------------------ Level 2 Learn
   BSC.Scenes.l2learn = async function (ctx, params) {
-    UI.setBg(null, { tint: 'plain' });
+    ctx.auto = true; // no Next buttons in the lesson: lines move on after the voice
+    UI.setBg('bg_level2', { tint: 'faded' });
     Learn.teacher();
     const steps = [
       // Beats 1–7: the Merger on 8/12
@@ -178,7 +179,7 @@
   }
 
   BSC.Scenes.l2game = async function (ctx, params) {
-    UI.setBg(null, { tint: 'plain' });
+    UI.setBg('bg_level2', { tint: 'hazy' });
     const S = BSC.Store.get();
     for (let i = params.step || 0; i < Levels.L2.length; i++) {
       ctx.save(i); UI.hud.progress(i, Levels.L2.length);
@@ -188,17 +189,20 @@
     UI.hud.progress(Levels.L2.length, Levels.L2.length);
     UI.world().innerHTML = ''; UI.feedback(null);
     const total = Object.values(S.stars).reduce((a, b) => a + b, 0);
-    Cast.add('byte', { char: 'byte', pose: 'cheer', x: 640, bottom: 200, h: 260 }); Cast.enter('byte', 'up'); Cast.idle('byte');
-    UI.feedback('ok', `You earned ${total} of 24 stars.`);
+    Cast.add('ira', { char: 'ira', pose: 'cheer', x: 380, bottom: 40, h: 340 }); Cast.enter('ira', 'left'); Cast.idle('ira');
+    Cast.add('byte', { char: 'byte', pose: 'cheer', x: 900, bottom: 60, h: 220 }); Cast.enter('byte', 'right'); Cast.idle('byte');
+    const card = UI.el('div', 'panel'); card.style.cssText = 'left:50%;top:130px;transform:translateX(-50%);text-align:center;width:560px;';
+    card.innerHTML = `<div class="title-card" style="display:inline-block">Level 2 complete!</div><p style="font-size:24px;margin:16px 0 0">You earned <b>${total} of 24</b> stars ★</p>`;
+    UI.world().appendChild(card); Anim.pop(card); BSC.Audio.play('ok'); // the star total stays on screen while they talk
     await ctx.say('Byte', 'Different numbers. Same charge. Biggest pieces!', { actor: 'byte' });
-    await ctx.say('Ira', 'Every bot left with its battery. Level 2 complete!', { next: 'Continue' });
+    await ctx.say('Ira', 'Every bot left with its battery. Level 2 complete!', { actor: 'ira', next: 'Continue' });
     await BSC.levelDone(ctx, 2);
   };
 
   function tokenSvg(bot) {
     const col = { zip: '#7c4dff', bolt: '#ff8a2a', volt: '#8f6cff', pixel: '#5a5fe0', spark: '#ff7a5c', gizmo: '#9a7cff', rivet: '#3d63d8', nova: '#e0399b' }[bot] || '#7c4dff';
-    return `<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><circle cx="32" cy="34" r="25" fill="rgba(0,0,0,.35)"/><rect x="9" y="12" width="10" height="38" rx="5" fill="#22264a"/><rect x="45" y="12" width="10" height="38" rx="5" fill="#22264a"/>
-      <circle cx="32" cy="31" r="22" fill="#f4f5ff" stroke="${col}" stroke-width="5"/><circle cx="32" cy="31" r="12" fill="#151b3f"/><circle cx="27" cy="29" r="3" fill="#45e3ff"/><circle cx="37" cy="29" r="3" fill="#45e3ff"/><path d="M32 4l6 8h-12z" fill="${col}"/></svg>`;
+    return `<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true"><circle cx="32" cy="36" r="24" fill="rgba(40,30,110,.25)"/>
+      <circle cx="32" cy="32" r="23" fill="#f4f5ff" stroke="${col}" stroke-width="5"/><circle cx="32" cy="31" r="12" fill="#151b3f"/><circle cx="27" cy="29" r="3" fill="#45e3ff"/><circle cx="37" cy="29" r="3" fill="#45e3ff"/><path d="M32 4l6 8h-12z" fill="${col}"/></svg>`;
   }
 
   function playOrder(ctx, L, idx) {
@@ -215,48 +219,43 @@
       const svgRows = [];
       Levels.MAZE.forEach((row, r) => [...row].forEach((ch, c) => {
         const x = c * TILE, y = r * TILE;
-        if (ch === '#') svgRows.push(`<rect class="wall" x="${x + 3}" y="${y + 3}" width="${TILE - 6}" height="${TILE - 6}" rx="12"/>`);
-        else svgRows.push(`<rect class="path" x="${x + 6}" y="${y + 6}" width="${TILE - 12}" height="${TILE - 12}" rx="14"/><rect class="tile-hit" data-r="${r}" data-c="${c}" x="${x}" y="${y}" width="${TILE}" height="${TILE}"/>`);
+        if (ch === '#') svgRows.push(`<rect class="wall" x="${x + 5}" y="${y + 5}" width="${TILE - 10}" height="${TILE - 10}" rx="11"/>`);
+        else svgRows.push(`<rect class="path" x="${x + 5}" y="${y + 5}" width="${TILE - 10}" height="${TILE - 10}" rx="11"/><rect class="tile-hit" data-r="${r}" data-c="${c}" x="${x}" y="${y}" width="${TILE}" height="${TILE}"/>`);
       }));
       board.innerHTML = `<svg viewBox="0 0 ${Mz.cols * TILE} ${Mz.rows * TILE}">${svgRows.join('')}</svg>`;
+      UI.$('#stage').dataset.layout = 'maze'; // Ira's line moves to the top of the screen (see CSS)
       w.appendChild(board);
       const at = (r, c) => [c * TILE + TILE / 2, r * TILE + TILE / 2];
       // start pad + shop + gates
-      const startPad = UI.el('div'); const [sx, sy] = at(...Mz.start); startPad.style.cssText = `position:absolute;left:${sx - 28}px;top:${sy - 28}px;width:56px;height:56px;border-radius:50%;border:3px dashed var(--cyan);`;
+      const startPad = UI.el('div', 'start-shadow'); const [sx, sy] = at(...Mz.start); startPad.style.left = sx + 'px'; startPad.style.top = (sy + 22) + 'px';
       board.appendChild(startPad);
-      const shopEl = UI.el('div', 'shop-el', '🏪<br>SHOP'); const [ex, ey] = at(...Mz.shop); shopEl.style.left = ex + 'px'; shopEl.style.top = ey + 'px'; board.appendChild(shopEl);
+      const shopEl = UI.el('div', 'shop-el', '<span class="ic">🏪</span>SHOP'); const [ex, ey] = at(...Mz.shop); shopEl.style.left = ex + 'px'; shopEl.style.top = ey + 'px'; board.appendChild(shopEl);
       const gateEls = L.gates.map((k, i) => { const g = UI.el('div', 'gate-el', '÷' + k); const [gx, gy] = at(...Mz.gates[i]); g.style.left = gx + 'px'; g.style.top = gy + 'px'; g.setAttribute('aria-label', 'Gate divide by ' + k); board.appendChild(g); return g; });
       const token = UI.el('div', 'mtoken', tokenSvg(L.bot)); board.appendChild(token);
       const place = (anim = true) => { const [x, y] = at(...pos); return anim ? Anim.to(token, { left: x, top: y, duration: 0.16, ease: 'power1.inOut' }) : gsap.set(token, { left: x, top: y }); };
       place(false);
 
-      // --- side panel ---
-      const side = UI.el('div', 'side-panel'); w.appendChild(side);
-      side.innerHTML = `<div class="label-plate" style="font-size:22px">Order: ${UI.frac(L.order[0], L.order[1])}</div>`;
-      const batt = Battery.create({ shape: L.shape, d: cur[1], n: cur[0], width: Battery.wide(L.shape) ? 230 : 170 });
-      side.appendChild(batt);
-      const now = UI.el('div', 'route'); side.appendChild(now);
-      const rec = UI.el('div', 'record-card');
-      rec.innerHTML = `Byte’s record<b>${L.record} gate${L.record > 1 ? 's' : ''}</b>`;
-      side.appendChild(rec);
-      const starsEl = UI.el('div', 'stars'); side.appendChild(starsEl);
-      const dpad = UI.el('div', 'dpad'); dpad.style.cssText = 'position:absolute;left:836px;top:420px;z-index:7;';
-      dpad.innerHTML = '<span></span><button type="button" data-d="up" aria-label="Up">▲</button><span></span><button type="button" data-d="left" aria-label="Left">◀</button><span></span><button type="button" data-d="right" aria-label="Right">▶</button><span></span><button type="button" data-d="down" aria-label="Down">▼</button><span></span>';
+      // --- right column: order, current charge, arrows ---
+      const side = UI.el('div', 'order-pill'); w.appendChild(side);
+      side.innerHTML = `<span class="lbl">Order:</span>${UI.frac(L.order[0], L.order[1])}`;
+      side.prepend(Battery.create({ shape: L.shape, d: L.order[1], n: L.order[0], width: Battery.wide(L.shape) ? 92 : 64 }));
+      const now = UI.el('div', 'frac-card'); now.setAttribute('aria-live', 'polite'); w.appendChild(now);
+      const dpad = UI.el('div', 'dpad');
+      dpad.innerHTML = `<span></span><button type="button" data-d="up" aria-label="Up">▲</button><span></span><button type="button" data-d="left" aria-label="Left">◀</button><span class="hub">${tokenSvg(L.bot)}</span><button type="button" data-d="right" aria-label="Right">▶</button><span></span><button type="button" data-d="down" aria-label="Down">▼</button><span></span>`;
       w.appendChild(dpad);
       const paint = () => {
         BSC.__cur = cur; // test hook (read-only)
-        now.innerHTML = `Route: ${UI.frac(L.order[0], L.order[1], 'in')}${route.map((s) => `<span style="color:var(--warn-ink)">→ ÷${s.k} →</span>${UI.frac(s.n, s.d, 'in')}`).join('')}`;
-        const s = liveStars(); starsEl.innerHTML = '★'.repeat(s) + `<span class="off">${'★'.repeat(3 - s)}</span>`; starsEl.setAttribute('aria-label', `${s} stars`);
+        now.innerHTML = UI.frac(cur[0], cur[1]); now.setAttribute('aria-label', `Charge now: ${cur[0]} over ${cur[1]}`);
         gateEls.forEach((g, i) => { g.classList.toggle('used', used.has(i)); g.classList.toggle('fits', !used.has(i) && (mistakes >= 3 || hintRung >= 2) && fits(L.gates[i])); });
       };
       paint();
-      Anim.from([board, side], { y: 20, opacity: 0, duration: 0.5, stagger: 0.1 });
+      Anim.from([board, side, now, dpad], { y: 20, opacity: 0, duration: 0.5, stagger: 0.08 });
 
       // --- talk ---
       const [o1, o2] = L.order;
       const botName = L.bot[0].toUpperCase() + L.bot.slice(1), beat = `Byte used ${L.record} gate${L.record > 1 ? 's' : ''}. Can you beat him?`;
       const NEW = { circle: 'Round ones this time.', square: 'Square ones now.', hexagon: 'Hexagons this time.', diamond: 'Diamonds this time.', triangle: 'Triangles this time.' };
-      BSC.sayLines(ctx, L.nudge ? [[botName, `I need ${o1}/${o2}, please!`], ['Ira', 'The shop only sells batteries with bigger pieces. Steer through a gate. It must divide the top and the bottom.']]
+      BSC.sayLines(ctx, L.nudge ? [[botName, `I need ${o1}/${o2}, please!`], ['Ira', 'The shop only sells batteries with bigger pieces. Steer through a gate. It must divide the top and the bottom.', { mark: 'divide' }]]
         : L.newShape ? [['Ira', `New batteries! ${NEW[L.shape] || ''}`.trim()], [botName, `I need ${o1}/${o2}! ${beat}`]]
         : [[botName, `I need ${o1}/${o2}! ${beat}`]], () => !done && !passed && !bumps);
       if (L.nudge) setTimeout(() => { if (ctx.alive) { const stop = Parts.tapHint(dpad.querySelector('[data-d="right"]')); setTimeout(stop, 3500); } }, 500);
@@ -347,8 +346,13 @@
         ctx.check();
         history.push({ cur: cur.slice(), used: new Set(used), pos: prev.slice(), passed, route: route.slice() });
         used.add(gi); passed++; route.push({ k, n: target[0], d: target[1] }); cur = target;
-        panel.remove(); UI.actions([]);
+        // show the pieces joining before the panel closes
+        host.innerHTML = ''; UI.actions([]);
+        const batt = Battery.create({ shape: L.shape, d: target[1] * k, n: target[0] * k, width: Battery.wide(L.shape) ? 230 : 170 });
+        host.appendChild(batt);
         await ctx.lock(() => BSC.L1Anim.joinAnim(ctx, batt, { d: cur[1], n: cur[0] }));
+        await ctx.wait(0.5);
+        panel.remove();
         UI.feedback('ok', `Yes! ${cur[0]}/${cur[1]}. The pieces got bigger.`);
         ctx.say('Ira', `Yes! ${cur[0]}/${cur[1]}. The pieces got bigger.` + (F.isSimplest(cur) ? ' Nothing else divides both. Go to the shop!' : ' Can they get bigger still?'), { wait: false });
         busyPanel = false; paint();
@@ -369,7 +373,7 @@
       function restore(h, toStart) {
         const i = history.indexOf(h); history = history.slice(0, i);
         cur = h.cur.slice(); used = new Set(h.used); pos = toStart ? Mz.start.slice() : h.pos.slice(); passed = h.passed; route = h.route.slice();
-        place(false); Battery.set(batt, { d: cur[1], n: cur[0] }); busyPanel = false; UI.actions([]); UI.feedback(null); paint();
+        place(false); busyPanel = false; UI.actions([]); UI.feedback(null); paint();
       }
       async function atShop() {
         if (!F.isSimplest(cur)) {

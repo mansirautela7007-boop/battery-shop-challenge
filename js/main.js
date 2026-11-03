@@ -2,7 +2,8 @@
 (function (BSC) {
   'use strict';
   const IMG = [
-    'bg/bg_station_morning', 'bg/bg_level1_bright', 'bg/bg_console', 'bg/bg_learning_bench', 'bg/bg_battery_shop', 'bg/bg_maze_floor', 'bg/bg_delivery_gate', 'bg/bg_endcard',
+    'bg/bg_station_morning', 'bg/bg_level1_bright', 'bg/bg_level2', 'bg/bg_level3', 'bg/bg_console', 'bg/bg_learning_bench', 'bg/bg_battery_shop', 'bg/bg_maze_floor', 'bg/bg_delivery_gate', 'bg/bg_endcard', 'bg/bg_cover',
+    'cover/logo', 'cover/ira_wave', 'cover/byte_cheer', 'cover/halo', 'cover/play',
     'batteries/battery_circle', 'batteries/battery_square', 'batteries/battery_triangle', 'batteries/battery_hexagon', 'batteries/slot_charger', 'batteries/slot_lock', 'batteries/shelf_cradle',
     'batteries/tool_cutter', 'batteries/tool_merger', 'batteries/charge_bar_frame',
     'props/l1_platform_rail', 'props/l1_queue_barrier', 'props/l1_stack_tray', 'props/l2_record_board', 'props/l2_gate_closed', 'props/l2_gate_open', 'props/l2_shop_entrance', 'props/l3_charge_wheel', 'props/l3_wheel_stand',

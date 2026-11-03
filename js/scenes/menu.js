@@ -5,14 +5,21 @@
   let loaded = false;
 
   BSC.Scenes.title = async function (ctx) {
-    UI.setBg('bg_endcard', { tint: 'soft' });
+    UI.setBg('bg_cover');
     const w = UI.world();
-    w.innerHTML = `<div class="logo"><small>A fractions adventure</small>The Battery Shop<br>Challenge</div><div class="loader" id="loader"><i></i></div>`;
-    BSC.Cast.add('ira', { char: 'ira', pose: 'wave', x: 210, bottom: 40, h: 380 });
-    BSC.Cast.add('byte', { char: 'byte', pose: 'cheer', x: 1080, bottom: 70, h: 240 });
-    BSC.Cast.idle('byte'); BSC.Cast.idle('ira');
-    BSC.Anim.from('.logo', { y: -40, opacity: 0, duration: 0.8, ease: 'back.out(1.6)' });
-    BSC.Anim.bob(document.querySelector('.logo'), 6, 2.4);
+    // Cover: logo up top, Ira and Byte on glowing halos, the Play button on the floor ring in the middle.
+    w.innerHTML = `<div class="cover">
+      <img class="cv-halo cv-halo-ira" src="assets/cover/halo.webp" alt="">
+      <img class="cv-halo cv-halo-byte" src="assets/cover/halo.webp" alt="">
+      <img class="cv-ira" src="assets/cover/ira_wave.webp" alt="Ira waving">
+      <img class="cv-byte" src="assets/cover/byte_cheer.webp" alt="Byte the robot">
+      <h1 class="cv-logo"><img src="assets/cover/logo.webp" alt="The Battery Shop Challenge"></h1>
+      <div class="loader" id="loader"><i></i></div></div>`;
+    const A = BSC.Anim;
+    A.from('.cv-logo', { y: -40, opacity: 0, duration: 0.8, ease: 'back.out(1.6)' });
+    A.from('.cv-ira', { x: -80, opacity: 0, duration: 0.7, ease: 'power3.out' });
+    A.from('.cv-byte', { x: 80, opacity: 0, duration: 0.7, ease: 'power3.out' });
+    A.bob(w.querySelector('.cv-logo'), 6, 2.4); A.bob(w.querySelector('.cv-byte'), 10, 1.8); A.breathe(w.querySelector('.cv-ira'));
     if (!loaded) {
       await BSC.preload((p) => { const bar = document.querySelector('#loader i'); if (bar) bar.style.width = Math.round(p * 100) + '%'; });
       loaded = true;
@@ -20,13 +27,12 @@
     ctx.check();
     const L = document.getElementById('loader'); if (L) L.remove();
     const s = Store.get();
-    const box = UI.el('div', 'panel'); box.style.cssText = 'left:50%;top:400px;transform:translateX(-50%);display:flex;gap:16px;padding:18px 22px;';
-    // Always start from the story (no "Continue"). Returning players skip the how-to cards and also get Levels.
+    // Always start from the story (no "Continue"). Returning players skip the how-to cards.
     const returning = !!(s.resume || s.completed.length);
-    box.appendChild(UI.button('▶ Play', { variant: 'primary big', onClick: () => (returning ? Game.go('prologue') : onboarding(() => Game.go('prologue'))) }));
-    if (returning) box.appendChild(UI.button('Levels', { variant: 'secondary', onClick: () => Game.go('levels') }));
-    w.appendChild(box);
-    BSC.Anim.pop(box);
+    const play = UI.button('<img src="assets/cover/play.webp" alt="Play">', { variant: 'cover-play', aria: 'Play', onClick: () => (returning ? Game.go('prologue') : onboarding(() => Game.go('prologue'))) });
+    w.querySelector('.cover').appendChild(play);
+    A.pop(play);
+    play.focus({ preventScroll: true });
   };
 
   /** Three short cards on first play: how the game is controlled. */
@@ -34,7 +40,7 @@
     const cards = [
       ['How to play', 'Read what Ira and Byte say, then press <b>Next ▸</b>.'],
       ['Drag or tap', 'Move things by dragging them. Prefer tapping? Tap the item, then tap where it goes.'],
-      ['Stuck?', 'Press <b>💡 Hint</b> for a clue. Press <b>❚❚</b> to pause. Your progress saves by itself.'],
+      ['Stuck?', 'Try again: after a wrong answer you get a clue. Press <b>Esc</b> to pause. Your progress saves by itself.'],
     ];
     let i = 0;
     const show = () => {

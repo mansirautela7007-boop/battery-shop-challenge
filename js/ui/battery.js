@@ -125,15 +125,33 @@
    * Create a battery element.
    * opts: shape, d, n, cols, on (indices), width (px), label (bool), num ('charged'|'all'), ghost (0..1), tap (bool)
    */
+  /** Bounding box of a region [x, y, w, h], padded so the outline stroke isn't clipped. */
+  function regionBox(R, pad = 12) {
+    const pts = R.type === 'circle' ? [[R.cx - R.r, R.cy - R.r], [R.cx + R.r, R.cy + R.r]]
+      : R.type === 'grid' ? [[R.x, R.y], [R.x + R.w, R.y + R.h]]
+      : R.type === 'fan' ? [R.apex, R.left, R.right]
+      : R.type === 'rhombus' ? [R.L, R.T, R.B, [R.T[0] + R.B[0] - R.L[0], R.T[1] + R.B[1] - R.L[1]]]
+      : [[R.cx - R.hw, R.cy - R.hh], [R.cx + R.hw, R.cy + R.hh]];
+    const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+    const x = Math.min(...xs) - pad, y = Math.min(...ys) - pad;
+    return [x, y, Math.max(...xs) + pad - x, Math.max(...ys) + pad - y];
+  }
+
   function create(opts) {
     const el = document.createElement('div');
     el.className = 'batt';
     el.dataset.shape = opts.shape;
     const C = CASINGS[opts.shape];
+    // plain: just the shape and its parts, no battery casing (used on every learn screen)
+    const stage = document.getElementById('stage');
+    const plain = opts.plain != null ? opts.plain : !!(stage && stage.dataset.layout === 'learn');
+    const vb = plain ? regionBox(C.region) : [0, 0, C.w, C.h];
+    if (plain) el.classList.add('plain');
+    el._vb = vb; // viewBox, for callers that place things on the shape
     const svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('viewBox', `0 0 ${C.w} ${C.h}`);
+    svg.setAttribute('viewBox', vb.join(' '));
     svg.setAttribute('role', 'img');
-    svg.innerHTML = (C.img ? `<image href="${C.img}" x="0" y="0" width="${C.w}" height="${C.h}" preserveAspectRatio="none"/>` : codeCasing(C.code)) +
+    svg.innerHTML = (plain ? '' : C.img ? `<image href="${C.img}" x="0" y="0" width="${C.w}" height="${C.h}" preserveAspectRatio="none"/>` : codeCasing(C.code)) +
       `<path class="b-window" d="${outlinePath(C.region)}"/><g class="b-cells"></g><g class="b-lines"></g><path class="b-outline" d="${outlinePath(C.region)}"/><g class="b-ghost"></g><g class="b-nums"></g>`;
     el.appendChild(svg);
     if (opts.width) el.style.width = opts.width + 'px';

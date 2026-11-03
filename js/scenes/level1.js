@@ -9,7 +9,8 @@
     area(top = 150) {
       const old = document.getElementById('learn'); if (old) old.remove();
       const a = UI.el('div'); a.id = 'learn';
-      a.style.cssText = `position:absolute;left:40px;right:300px;top:${top}px;bottom:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:6;`;
+      a.style.cssText = `position:absolute;left:40px;right:40px;top:${Math.max(top, 150)}px;bottom:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:6;`;
+      a.className = 'learn-card'; // sits inside the full-screen white learn frame (see CSS)
       UI.world().appendChild(a); return a;
     },
     row(parent, gap = 34) { const r = UI.el('div'); r.style.cssText = `display:flex;align-items:center;justify-content:center;gap:${gap}px;`; parent.appendChild(r); return r; },
@@ -28,11 +29,8 @@
       const btns = buttons.map((b) => { const el = UI.el('button', 'tool', b); el.type = 'button'; r.appendChild(el); return el; });
       t.appendChild(r); parent.appendChild(t); t._btns = btns; return t;
     },
-    /** Ira teaches every lesson: she stands on the right (or wherever the caller puts her). */
-    teacher(pose = 'talk', { x = 1150, bottom = 150, h = 380 } = {}) {
-      if (!Cast.get('ira')) { Cast.add('ira', { char: 'ira', pose, x, bottom, h }); Cast.enter('ira', 'right'); Cast.idle('ira'); }
-      else { gsap.to(Cast.get('ira'), { left: x, bottom, height: h, opacity: 1, duration: Anim.reduced ? 0.01 : 0.4, ease: 'power2.inOut' }); Cast.pose('ira', pose); }
-    },
+    /** Ira no longer stands in the lessons: she talks from the instruction box at the top. Kept so callers stay simple. */
+    teacher() {},
     /** Wait until the learner writes [n,d]. Feedback follows the storyboard (scenes 19–21). */
     ask(ctx, host, target, { label = 'What is the new fraction?', batt = null } = {}) {
       return new Promise((resolve, reject) => {
@@ -61,6 +59,7 @@
       r.remove(); return ans;
     },
     async run(ctx, steps, start = 0) {
+      UI.$('#stage').dataset.layout = 'learn'; // full-screen white frame behind the lesson
       for (let i = Math.min(start, steps.length - 1); i < steps.length; i++) {
         ctx.check(); ctx.save(i);
         UI.hud.progress(i, steps.length); UI.hud.setHint(null); UI.feedback(null); UI.actions([]);
@@ -99,27 +98,17 @@
   // talks in a speech bubble; the circle, the cut tools and the panels move between fixed spots.
   // Frames 1, 6, 9 wait for the round arrow; 2, 7, 8 wait for the highlighted tool; 3–5 play by themselves.
   const plain = (s) => String(s).replace(/\*\*/g, '').replace(/\|/g, ' ');
-  const rich = (s) => String(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').split('|').map((p, i) => `<p class="${i ? 'sub' : /\*\*/.test(s) ? 'mixed' : 'lead'}">${p}</p>`).join('');
   const CF = {
-    ira: { x: 150, h: 640, bottom: -300 }, // half body: waist at the bottom edge, same spot in every frame
-    bubble: { left: 34, bottom: 352, width: 380 }, // sits on Ira's head (bottom-anchored, grows upward), tail points down at her
-    circle: { right: { x: 640, top: 150, w: 320 }, left: { x: 640, top: 150, w: 320 }, mid: { x: 640, top: 150, w: 290 } }, // battery stays centred
-    tools: { side: { left: 850, top: 330, width: 300, height: 160 } }, // always right beside the battery (below the cutter's path)
+    // circle + tools form one group centred in the learn frame (580px wide: 240 circle, 40 gap, 300 tools)
+    circle: { right: { x: 470, top: 238, w: 240 }, left: { x: 470, top: 238, w: 240 }, mid: { x: 470, top: 248, w: 220 } },
+    tools: { side: { left: 630, top: 320, width: 300, height: 160 } }, // right beside the battery (below the cutter's path)
   };
 
   async function cutFlow(ctx) {
-    BSC.Dialog.hide();
     const w = UI.world();
     const old = document.getElementById('cutflow'); if (old) old.remove();
     const root = UI.el('div'); root.id = 'cutflow'; w.appendChild(root);
 
-    // Ira: half body in the bottom-left corner for the whole intro.
-    if (!Cast.get('ira')) Cast.add('ira', { char: 'ira', pose: 'point', x: CF.ira.x, bottom: CF.ira.bottom, h: CF.ira.h });
-    const dEl = Cast.get('ira'); dEl.classList.add('cf-teacher');
-    gsap.set(dEl, { left: CF.ira.x, bottom: CF.ira.bottom, height: CF.ira.h, opacity: 0 });
-    Cast.pose('ira', 'point'); Cast.idle('ira');
-
-    const bubble = UI.el('div', 'sbubble'); bubble.hidden = true; root.appendChild(bubble);
     const circ = UI.el('div', 'cf-circle'); root.appendChild(circ);
     const batt = Battery.create({ shape: 'circle', d: 2, n: 1, width: 320 }); circ.appendChild(batt);
     const plate = UI.el('div', 'label-plate cf-plate', UI.frac(1, 2)); circ.appendChild(plate);
@@ -132,19 +121,15 @@
     const dur = () => (Anim.reduced ? 0.01 : 0.45);
     const placeCircle = (k) => { const p = CF.circle[k]; return gsap.to(circ, { left: p.x - p.w / 2, top: p.top, width: p.w, duration: dur(), ease: 'power2.inOut' }); };
     const placeTools = () => gsap.to(tools, Object.assign({ opacity: 1, duration: dur(), ease: 'power2.inOut' }, CF.tools.side));
-    const placeBubble = (k) => { Object.assign(bubble.style, { left: CF.bubble.left + 'px', top: 'auto', bottom: CF.bubble.bottom + 'px', width: CF.bubble.width + 'px' }); bubble.dataset.size = k; };
     const relabel = (n, d) => { plate.innerHTML = UI.frac(n, d); Anim.pop(plate); };
     gsap.set(circ, { left: CF.circle.right.x - CF.circle.right.w / 2, top: CF.circle.right.top, width: CF.circle.right.w });
     gsap.set(tools, CF.tools.side); tools.dataset.size = 'md'; tools.hidden = false;
 
-    // Speak a line in the bubble. mode: 'arrow' (wait for ›), 'auto' (move on after the voice / reading time), 'none' (return at once)
-    async function line(text, { mode = 'auto', pose = null, at = 'intro', show = true, hl = null } = {}) {
+    // Speak a line in the instruction box. mode: 'arrow' (wait for ›), 'auto' (move on after the voice / reading time), 'none' (return at once)
+    async function line(text, { mode = 'auto', hl = null } = {}) {
       ctx.check();
-      if (pose) Cast.pose('ira', pose);
-      bubble.hidden = !show;
-      if (show) { placeBubble(at); bubble.innerHTML = rich(text) + (hl ? `<p class="hl">${hl}</p>` : ''); Anim.fromTo(bubble, { y: 8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3 }); }
-      Cast.talk('ira');
-      const spoken = BSC.Audio.voice('Ira', plain(text) + (hl ? ' ' + hl : ''));
+      BSC.Dialog.say('Ira', plain(text) + (hl ? ' ' + hl : ''), { wait: false });
+      const spoken = BSC.Dialog.voiceDone;
       if (mode === 'none') return;
       if (mode === 'arrow') return arrow();
       const ok = await spoken; ctx.check();
@@ -164,9 +149,9 @@
     }
     // Frame 3: the cutter fires a laser at the circle; the new cut lines glow, then the parts split.
     async function laser(k) {
-      const R = Battery.CASINGS.circle.region, C = Battery.CASINGS.circle;
+      const R = Battery.CASINGS.circle.region, vb = batt._vb;
       const cw = parseFloat(circ.style.width), cl = parseFloat(circ.style.left), ct = parseFloat(circ.style.top);
-      const s = cw / C.w, cx = cl + R.cx * s, cy = ct + R.cy * s, r = R.r * s;
+      const s = cw / vb[2], cx = cl + (R.cx - vb[0]) * s, cy = ct + (R.cy - vb[1]) * s, r = R.r * s;
       const gun = UI.el('img'); gun.src = 'assets/batteries/tool_cutter.webp'; gun.alt = ''; gun.className = 'cf-gun';
       const gw = 200, gx = cx + r * 1.12, gy = cy - r * 1.05;
       gun.style.cssText = `left:${gx}px;top:${gy}px;width:${gw}px;`;
@@ -192,7 +177,6 @@
     const reset = () => { Battery.set(batt, { d: 2, n: 1 }); relabel(1, 2); };
 
     // 1. Introduction
-    await ctx.play(gsap.to(dEl, { opacity: 1, duration: dur() }));
     Anim.from(tools, { x: 40, opacity: 0, duration: 0.4 });
     await line('**1/2** and **2/4** cover the same portion.|They carry the same charge. Let’s see how!', { pose: 'talk', at: 'intro' });
     await line('This circle shows **1 out of 2 equal parts,** which we write as **1/2**.', { pose: 'point', at: 'intro' });
@@ -200,7 +184,7 @@
     line('Let’s cut each part into 2 equal pieces.|Choose how many pieces to make from each part.', { mode: 'none', pose: 'talk', at: 'tools' });
     await tapTool(2);
     // 3. Action: laser cut (battery and tools stay where they are)
-    bubble.hidden = true; BSC.Audio.stopVoice();
+    BSC.Audio.stopVoice();
     await ctx.lock(() => laser(2));
     relabel(2, 4);
     await ctx.hold(0.4);
@@ -209,7 +193,7 @@
     // 5. Concept
     await line('Two out of four parts are shaded.', { pose: 'talk', at: 'intro', hl: 'The shaded amount is the same!' });
     // 6. Equation
-    bubble.hidden = true; gsap.to([circ, tools], { opacity: 0, duration: 0.25 });
+    gsap.to([circ, tools], { opacity: 0, duration: 0.25 });
     const eq = UI.el('div', 'panel cf-panel cf-eqpanel');
     eq.innerHTML = `<div class="cf-head">These fractions are equivalent.</div>
       <div class="cf-eq">${UI.frac(1, 2)}<span class="cf-sign">=</span>
@@ -229,7 +213,7 @@
       await ctx.hold(1.2);
     }
     // 9. Summary
-    bubble.hidden = true; gsap.to([circ, tools], { opacity: 0, duration: 0.25 });
+    gsap.to([circ, tools], { opacity: 0, duration: 0.25 });
     const sum = UI.el('div', 'panel cf-panel cf-sumpanel');
     sum.innerHTML = '<div class="cf-head">Summary</div>';
     const srow = UI.el('div', 'cf-sum'); sum.appendChild(srow);
@@ -242,15 +226,11 @@
     root.appendChild(sum); Anim.pop(sum);
     await line('When we cut each part into equal pieces, the shaded amount stays the same.', { pose: 'talk', show: false });
     root.remove();
-    // Back to Ira standing on the right for the rest of the lesson.
-    dEl.classList.remove('cf-teacher');
-    Learn.teacher('talk');
   }
 
   // ------------------------------------------------------------ Level 1 Learn
   BSC.Scenes.l1learn = async function (ctx, params) {
-    ctx.auto = true; ctx.float = false; // no Next/arrow buttons: lines move on after the voice; keep the bottom dialogue
-    ctx.auto = true; ctx.float = false; // no Next/arrow buttons: lines move on after the voice; keep the bottom dialogue
+    ctx.auto = true; // no Next/arrow buttons: lines move on after the voice
     UI.setBg('bg_level1_bright', { tint: 'faded' });
     if ((params.step || 0) > 0) Learn.teacher(); // step 0 (the cut intro) places Ira itself
     const steps = [
@@ -328,8 +308,8 @@
           return box;
         });
         const host = UI.el('div'); a.appendChild(host);
-        Cast.add('byte', { char: 'byte', pose: 'point', x: 990, bottom: 440, h: 140 }); Cast.enter('byte', 'up');
-        await ctx.say('Byte', '6/9 has bigger numbers, so it must have more charge!', { actor: 'byte' });
+        Cast.add('byte', { char: 'byte', pose: 'point', x: 990, bottom: 40, h: 140 }); Cast.enter('byte', 'up');
+        await ctx.say('Byte', '6/9 has bigger numbers, so it must have more charge!', { actor: 'byte', beside: true });
         await ctx.say('Ira', 'Let’s check. Write the charge for each slot.', { actor: 'ira', pose: 'talk' });
         for (let i = 1; i < 3; i++) {
           const box = boxes[i]; box.classList.add('demo');
@@ -395,12 +375,13 @@
     // A16: end
     UI.hud.progress(items.length, items.length);
     UI.world().innerHTML = ''; UI.feedback(null);
-    const row = UI.el('div'); row.style.cssText = 'position:absolute;left:300px;top:180px;width:680px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;';
+    const row = UI.el('div'); row.style.cssText = 'position:absolute;left:300px;top:96px;width:680px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;';
     [[1, 2], [2, 4], [3, 6], [4, 8]].forEach(([n, d]) => row.appendChild(Parts.slot({ shape: 'circle', d, n, width: 120 })));
     UI.world().appendChild(row);
-    Cast.add('byte', { char: 'byte', pose: 'cheer', x: 1090, bottom: 300, h: 190 }); Cast.enter('byte', 'right'); Cast.idle('byte');
+    Cast.add('ira', { char: 'ira', pose: 'cheer', x: 170, bottom: 40, h: 340 }); Cast.enter('ira', 'left'); Cast.idle('ira');
+    Cast.add('byte', { char: 'byte', pose: 'cheer', x: 1090, bottom: 60, h: 190 }); Cast.enter('byte', 'right'); Cast.idle('byte');
     await ctx.say('Byte', 'Bigger numbers. Same charge.', { actor: 'byte' });
-    await ctx.say('Ira', 'Every bot is charged!', { next: 'Continue' });
+    await ctx.say('Ira', 'Every bot is charged!', { actor: 'ira', beside: true, next: 'Continue' });
     await levelDone(ctx, 1);
   };
 
@@ -421,7 +402,7 @@
   async function sayLines(ctx, lines, stillOn = () => true) {
     for (let i = 0; i < lines.length; i++) {
       if (!ctx.alive || !stillOn()) return;
-      ctx.say(lines[i][0], lines[i][1], { wait: false });
+      ctx.say(lines[i][0], lines[i][1], Object.assign({ wait: false }, lines[i][2]));
       if (i === lines.length - 1) return;
       const spoken = await BSC.Dialog.voiceDone;
       if (!ctx.alive || !stillOn()) return;
@@ -443,28 +424,13 @@
     const st = document.getElementById('stage').getBoundingClientRect(), r = el.getBoundingClientRect(), k = UI.scale();
     return { x: (r.left - st.left) / k, y: (r.top - st.top) / k, w: r.width / k, h: r.height / k };
   }
-  /** Right slot: the bot hops over to the charger, the charger's cable plugs into it and it charges up. */
-  async function plugIn(ctx, { card, slot, bot, n, d }) {
-    const w = UI.world(), dock = box(slot.querySelector('.slot-dock')), from = box(card), botH = 120;
-    BSC.Dialog.hide(); // clear the floor: the old instruction would cover the bot
-    // 1. The bot leaves its card and hops in an arc to stand in front of its charger.
-    const sx = dock.x + dock.w * 0.58, groundY = dock.y + dock.h + 70; // just in front of its own charger, below its label
-    const a = Cast.add('plugged', { char: bot, pose: 'neutral', x: sx, bottom: 720 - groundY, h: botH, cls: 'plugged', parent: w });
-    Cast.screen('plugged', UI.frac(n, d));
-    const inCard = Cast.get('bot'); if (inCard) gsap.to(inCard, { opacity: 0, duration: 0.2 });
-    card.classList.add('emptied');
-    const dx = from.x + from.w / 2 - sx, dy = from.y + from.h * 0.62 - (groundY - botH / 2), apex = Math.min(dy, 0) - 90;
-    BSC.Audio.play('pick');
-    await ctx.play(gsap.timeline()
-      .fromTo(a, { x: dx }, { x: 0, duration: Anim.reduced ? 0.01 : 0.75, ease: 'power1.inOut' }, 0)
-      .fromTo(a, { y: dy }, { y: apex, duration: Anim.reduced ? 0.01 : 0.38, ease: 'power2.out' }, 0)
-      .to(a, { y: 0, duration: Anim.reduced ? 0.01 : 0.37, ease: 'power2.in' }, Anim.reduced ? 0.01 : 0.38));
-    BSC.Audio.play('drop');
-    if (!Anim.reduced) await ctx.play(gsap.fromTo(a.querySelector('img'), { scaleY: 0.82, scaleX: 1.12, transformOrigin: '50% 100%' }, { scaleY: 1, scaleX: 1, duration: 0.4, ease: 'elastic.out(1.2, 0.4)' }));
-
-    // 2. The cable runs from the charger's plug to the port on the bot's side and clicks in.
-    const plug = [dock.x + dock.w * 0.04, dock.y + dock.h * 0.84], bb = box(a.querySelector('img'));
-    const port = [bb.x + bb.w * 0.2, bb.y + bb.h * 0.6]; // port on the bot's left side, facing the plug
+  /** Right slot: the bot has rolled along the belt to its charger; the charger's cable plugs into it and it charges up. */
+  async function plugIn(ctx, { slot }) {
+    const w = UI.world(), dock = box(slot.querySelector('.slot-dock'));
+    const a = Cast.get('bot'), img = a.querySelector('img'), bb = box(img);
+    // 1. The cable runs from the charger's plug to the port on the bot's side and clicks in.
+    const plug = [dock.x + dock.w * 0.04, dock.y + dock.h * 0.84];
+    const port = [bb.x + bb.w * 0.2, bb.y + bb.h * 0.55]; // port on the bot's left side, facing the plug
     const sag = [Math.min(plug[0], port[0]) - 26, Math.max(plug[1], port[1]) + 18];
     const path = `M${plug[0]},${plug[1]} Q${sag[0]},${sag[1]} ${port[0]},${port[1]}`;
     const cable = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -476,27 +442,27 @@
     await ctx.play(Anim.to(wire, { strokeDashoffset: 0, duration: 0.45, ease: 'power2.inOut' }));
     gsap.set(jack, { opacity: 1 }); Anim.pop(jack); BSC.Audio.play('clunk'); Anim.burst(port[0], port[1], 'spark', 10);
 
-    // 3. Charging: energy pulses along the cable, the slot's charge flashes, the bot glows and its meter fills.
+    // 2. Charging: energy pulses along the cable, the slot's charge flashes, the bot glows and its meter fills.
     const meter = UI.el('div', 'charge-meter', '<span class="cm-ic">⚡</span><span class="cm-bar"><b></b></span>');
-    meter.style.left = (sx + 112) + 'px'; meter.style.top = (groundY - botH * 0.62) + 'px'; w.appendChild(meter); // beside the bot
+    meter.style.left = (bb.x + bb.w + 64) + 'px'; meter.style.top = (bb.y + bb.h * 0.3) + 'px'; w.appendChild(meter); // beside the bot, clear of the charger's plate
     Anim.pop(meter);
     gsap.set(flow, { opacity: 1 });
     if (!Anim.reduced) {
       gsap.fromTo(flow, { strokeDashoffset: 0 }, { strokeDashoffset: -60, duration: 0.5, ease: 'none', repeat: -1 }); // keeps flowing while plugged
-      gsap.to(a.querySelector('img'), { filter: 'drop-shadow(0 0 18px rgba(69,227,255,.95)) drop-shadow(0 12px 12px rgba(30,34,82,.3))', duration: 0.35, yoyo: true, repeat: 5 });
+      gsap.to(img, { filter: 'drop-shadow(0 0 18px rgba(69,227,255,.95)) drop-shadow(0 12px 12px rgba(30,34,82,.3))', duration: 0.35, yoyo: true, repeat: 5 });
     }
-    a.classList.add('charging');
+    a.classList.add('plugged', 'charging');
     BSC.Audio.play('charge');
     Battery.set(slot._batt, {}, { anim: 'fill' });
     const sparks = Anim.reduced ? null : gsap.to({}, { duration: 0.22, repeat: 6, onRepeat: () => Anim.burst(bb.x + bb.w / 2, bb.y + bb.h * 0.45, 'cyan', 3) });
     await ctx.play(Anim.fromTo(meter.querySelector('b'), { width: '0%' }, { width: '100%', duration: 1.5, ease: 'power1.inOut' }));
     if (sparks) sparks.kill();
 
-    // 4. Full: the meter goes green, the bot cheers.
+    // 3. Full: the meter goes green, the bot cheers.
     meter.classList.add('full'); meter.querySelector('.cm-ic').textContent = '✓';
     a.classList.remove('charging');
-    BSC.Audio.play('star'); Anim.burst(sx + 112, groundY - botH * 0.55, 'star', 10);
-    Cast.pose('plugged', 'happy'); await ctx.play(Cast.hop('plugged'));
+    BSC.Audio.play('star'); Anim.burst(bb.x + bb.w + 64, bb.y + bb.h * 0.3, 'star', 10);
+    Cast.pose('bot', 'happy'); await ctx.play(Cast.hop('bot'));
   }
 
   /** One A-item. Resolves when the bot is charged and the learner presses Next. */
@@ -508,36 +474,57 @@
 
       const botName = L.bot[0].toUpperCase() + L.bot.slice(1);
       const marks = '<i></i><i></i><i></i>';
-      // Instruction banner (the standing task; spoken lines are voice-only, so there is no dialogue panel here)
-      const banner = UI.el('div', 'l1-banner', `<b class="marks l">${marks}</b><span>${L.newShape ? 'New batteries! ' : ''}Drag ${botName} to the charger equal to ${UI.frac(n, d)}.${L.fewer ? ' Find fewer pieces.' : ''}</span><b class="marks r">${marks}</b>`);
-      w.appendChild(banner); Anim.from(banner, { y: -20, opacity: 0, duration: 0.45, ease: 'back.out(2)' });
-      // Charging platform: the bot's pad on the left, a recessed strip with a glowing pad under each charger
-      const plat = UI.el('div', 'l1-platform', '<i class="botpad"></i><div class="strip">' + [0, 1, 2, 3].map((i) => `<i class="pad" style="left:${110 + 220 * i}px"></i>`).join('') + '</div>');
+      // Questions 1–2 teach the move on a conveyor belt (the bot can only slide sideways); from question 3 it is free drag and drop.
+      const onBelt = idx < 2;
+      // Charging platform at the back (a glowing pad under each charger); the belt, or a floor pad, in front
+      // (drag and drop: the platform runs the full width and the bot waits on its own pad at the left end, level with the chargers)
+      const plat = UI.el('div', 'l1-platform' + (onBelt ? '' : ' free'), (onBelt ? '' : '<i class="botpad"></i>') + '<div class="strip">' + [0, 1, 2, 3].map((i) => `<i class="pad" style="left:${123 + 220 * i}px"></i>`).join('') + '</div>');
       w.appendChild(plat);
-      // The bot (drag handle) on its pad, with a "Needs" speech bubble above its head
-      const card = UI.el('div', 'botcard selectable'); card.tabIndex = 0; card.setAttribute('role', 'button');
-      card.setAttribute('aria-label', `${botName} needs ${n} over ${d}. Drag to a charger, or press to pick up and then choose a charger.`);
+      const belt = onBelt ? UI.el('div', 'l1-belt', '<i class="roller l"></i><div class="belt-track"></div><i class="roller r"></i>') : null;
+      if (belt) w.appendChild(belt);
+      // The bot (drag handle) rides the belt, with a "Needs" speech bubble above its head
+      const card = UI.el('div', 'botcard selectable' + (onBelt ? '' : ' free')); card.tabIndex = 0; card.setAttribute('role', 'button');
+      card.setAttribute('aria-label', `${botName} needs ${n} over ${d}. ${onBelt ? 'Drag along the belt to a charger' : 'Drag onto a charger'}, or press to pick up and then choose a charger.`);
       w.appendChild(card);
-      Cast.add('bot', { char: L.bot, pose: 'neutral', x: 107, bottom: -14, h: 270, parent: card }); // wheels on the pad
+      Cast.add('bot', { char: L.bot, pose: 'neutral', x: 107, bottom: -14, h: 210, parent: card }); // wheels on the belt
       Cast.screen('bot', UI.frac(n, d));
       const tag = UI.el('div', 'need-tag', `<span>Needs</span>${UI.frac(n, d)}`); card.appendChild(tag);
       tag.appendChild(Battery.create({ shape: L.shape, d, n, width: Battery.wide(L.shape) ? 96 : 64 }));
       card.appendChild(UI.el('b', 'marks bot', marks));
-      // Drag hint: a dashed path from the bot's pad with a hand, until the learner first grabs the bot
-      const dragHint = UI.el('div', 'drag-hint', '<svg viewBox="0 0 170 80"><path d="M6 10 C 30 60, 90 72, 140 52"/></svg><span>👆</span>');
+      // Drag hint until the learner first grabs the bot: a hand sliding along the belt, or a dashed arc up towards the chargers
+      const dragHint = onBelt ? UI.el('div', 'drag-hint', '<svg viewBox="0 0 200 40"><path d="M6 20 H 170"/><path class="tip" d="M160 8 L 182 20 L 160 32"/></svg><span>👆</span>')
+        : UI.el('div', 'drag-hint free', '<svg viewBox="0 0 200 40"><path d="M6 20 H 170"/><path class="tip" d="M160 8 L 182 20 L 160 32"/></svg><span>👆</span>');
       dragHint.setAttribute('aria-hidden', 'true'); w.appendChild(dragHint);
 
       // Slots (right)
       const order = [0, 1, 2, 3].sort((a, b) => ((a * 7 + idx * 3) % 5) - ((b * 7 + idx * 3) % 5));
       const slotsData = order.map((k) => L.slots[k]);
-      const row = UI.el('div', 'slots-row'); w.appendChild(row);
+      const row = UI.el('div', 'slots-row' + (onBelt ? '' : ' free')); w.appendChild(row);
       const slots = slotsData.map(([sn, sd]) => {
         const s = Parts.slot({ shape: L.shape, d: sd, n: sn, width: Battery.wide(L.shape) ? 180 : 128, baseWidth: 189 }); // same charger size for every shape
         s.classList.add('selectable'); s.tabIndex = 0; s.setAttribute('role', 'button'); s.setAttribute('aria-label', `Slot with ${sn} over ${sd}`);
         row.appendChild(s); return s;
       });
       Anim.from(slots, { y: 30, opacity: 0, stagger: 0.08, duration: 0.4 });
-      Anim.from(card, { x: -80, opacity: 0, duration: 0.5 });
+      Anim.from(card, { opacity: 0, duration: 0.5 });
+      // Belt geometry: the bot's centre starts at HOME; it can roll right as far as the last charger.
+      const HOME = 180, slotX = () => slots.map((s) => box(s._batt).x + box(s._batt).w / 2);
+      let botX = 0; // how far the bot has rolled along the belt
+      const setBot = (x) => { botX = x; gsap.set(card, { x }); if (onBelt) belt.style.setProperty('--off', x + 'px'); tag.style.opacity = x > 24 ? 0 : 1; }; // the bubble steps aside so it never covers a charger
+      const nearest = (x) => { const xs = slotX(); let k = -1, best = 95; xs.forEach((sx, i) => { const dd = Math.abs(HOME + x - sx); if (dd < best) { best = dd; k = i; } }); return k; };
+      const markOver = (k) => slots.forEach((s, i) => s.classList.toggle('over', i === k));
+      // Move the bot to x: it rolls along the belt, or (drag and drop) hops across the floor
+      const rollTo = (x, dur = 0.6) => {
+        const t = Anim.reduced ? 0.01 : dur, tl = gsap.timeline().to({ v: botX }, { v: x, duration: t, ease: 'power2.inOut', onUpdate() { setBot(this.targets()[0].v); } }, 0);
+        // drag and drop: hop down off the platform to stand in front of a charger (clear of its plate), or back up onto the pad
+        // (the platform sits on the floor, so in front of a charger the bot steps down and shrinks a little, clear of the charger's plate)
+        if (!onBelt && Math.abs(x - botX) > 4) {
+          const away = x > 4, y1 = away ? 106 : 0, y0 = gsap.getProperty(card, 'y');
+          tl.to(card, { y: Math.min(y0, y1) - 60, duration: t / 2, ease: 'power2.out' }, 0).to(card, { y: y1, duration: t / 2, ease: 'power2.in' }, t / 2)
+            .to(card, { scale: away ? 0.6 : 1, transformOrigin: '50% 100%', duration: t, ease: 'power1.inOut' }, 0);
+        }
+        return ctx.play(tl);
+      };
 
       // Spoken instructions (voice only: the banner carries the words on screen)
       const ask = [botName, `I need ${n}/${d} charge.`];
@@ -567,12 +554,15 @@
         clearTimeout(idleT);
         select(false); UI.feedback(null);
         const s = slots[k], [sn, sd] = slotsData[k];
+        markOver(k);
+        await ctx.lock(() => rollTo(slotX()[k] - HOME, onBelt ? 0.45 : 0.55)); // ride the belt (or hop) to the chosen charger
+        markOver(-1);
         slots.forEach((x) => { x.classList.remove('is-bad'); Parts.badge(x, null); if (hintRung < 3) Battery.ghost(x._batt, null); });
         if (F.equal([sn, sd], L.need)) {
-          solved = true; UI.hud.setHint(null);
+          solved = true; UI.hud.setHint(null); card.classList.remove('selectable'); card.blur();
           await ctx.lock(async () => {
             s.classList.add('is-ok'); Parts.badge(s, 'ok');
-            await plugIn(ctx, { card, slot: s, bot: L.bot, n, d });
+            await plugIn(ctx, { slot: s });
             const why = sd > d ? `each piece of ${n}/${d} is cut into ${sd / d}` : `every ${d / sd} pieces of ${n}/${d} are joined into 1`;
             UI.feedback('ok', `Right slot! ${n}/${d} = ${sn}/${sd}: ${why}.`);
           });
@@ -596,63 +586,83 @@
           else if (cmp > 0) msg += `Too much charge: ${sn}/${sd} goes past the bot’s ${n}/${d} (dashed outline).`;
           else msg += `Not enough charge: ${sn}/${sd} doesn’t reach the bot’s ${n}/${d} (dashed outline).`;
           UI.feedback('bad', msg);
-          await ctx.wait(0.4);
+          await ctx.wait(0.5);
+          await rollTo(0, 0.7); // the bot goes back to its start
         });
         if (tries >= 2 && hintRung < 2) showHint(2);
         armIdle();
       }
 
-      // ---- input: drag, or tap-then-tap, or keyboard ----
+      // ---- input: drag (along the belt, or free drag and drop), or tap-then-tap, or keyboard ----
       let drag = null;
-      // Stop the browser's own image drag (it swallows pointerup and leaves a stuck ghost + copy of the bot).
+      // Stop the browser's own image drag (it swallows pointerup and leaves a stuck ghost).
       card.addEventListener('dragstart', (e) => e.preventDefault());
       card.querySelectorAll('img').forEach((im) => { im.draggable = false; });
-      const clearDrag = () => {
-        if (drag && drag.g) drag.g.remove();
-        drag = null; card.classList.remove('dragging');
-        w.querySelectorAll('.drag-ghost').forEach((g) => { if (g !== card) g.remove(); });
-        slots.forEach((s) => s.classList.remove('over'));
-      };
-      card.addEventListener('pointerdown', (e) => {
-        if (!ctx.alive || solved || Game.busy || Game.paused) return;
-        if (e.button > 0) return; // ignore right/middle clicks
-        e.preventDefault();
-        dragHint.remove();
-        clearDrag();
-        armIdle();
-        drag = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId };
-        try { card.setPointerCapture(e.pointerId); } catch (err) { /* pointer already released */ }
-      });
-      card.addEventListener('pointermove', (e) => {
-        if (!drag || e.pointerId !== drag.id) return;
-        if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 8) {
-          drag.moved = true; BSC.Audio.play('pick'); UI.feedback(null);
-          const g = UI.el('div', 'drag-ghost');
-          const img = UI.el('img'); img.src = Cast.src(L.bot, 'neutral'); img.style.height = '200px'; img.alt = ''; img.draggable = false;
-          g.appendChild(img); w.appendChild(g); drag.g = g; card.classList.add('dragging');
-        }
-        if (drag.g) {
+      if (onBelt) {
+        card.addEventListener('pointerdown', (e) => {
+          if (!ctx.alive || solved || Game.busy || Game.paused) return;
+          if (e.button > 0) return; // ignore right/middle clicks
+          e.preventDefault();
+          dragHint.remove();
+          armIdle();
+          drag = { x: e.clientX, x0: botX, moved: false, id: e.pointerId, max: Math.max(...slotX()) - HOME };
+          try { card.setPointerCapture(e.pointerId); } catch (err) { /* pointer already released */ }
+        });
+        card.addEventListener('pointermove', (e) => {
+          if (!drag || e.pointerId !== drag.id) return;
+          const dx = (e.clientX - drag.x) / UI.scale();
+          if (!drag.moved && Math.abs(dx) > 6) { drag.moved = true; BSC.Audio.play('pick'); UI.feedback(null); select(false); card.classList.add('dragging'); }
+          if (!drag.moved) return;
+          setBot(Math.max(0, Math.min(drag.max, drag.x0 + dx)));
+          markOver(nearest(botX)); // the charger the bot is under lights up
+        });
+        const end = (e) => {
+          if (!drag || e.pointerId !== drag.id) return;
+          const dd = drag; drag = null; card.classList.remove('dragging');
+          if (!dd.moved) { markOver(-1); if (e.type === 'pointerup') select(!picked); return; }
+          const k = nearest(botX);
+          if (e.type === 'pointerup' && k >= 0) { BSC.Audio.play('drop'); drop(k); }
+          else { markOver(-1); ctx.lock(() => rollTo(0, 0.5)).catch(() => {}); }
+        };
+        card.addEventListener('pointerup', end); card.addEventListener('pointercancel', end);
+        card.addEventListener('lostpointercapture', (e) => { if (drag && e.pointerId === drag.id) end(e); });
+        window.addEventListener('blur', () => { if (drag) { drag = null; card.classList.remove('dragging'); markOver(-1); setBot(0); } });
+      } else {
+        // Free drag and drop: a copy of the bot follows the pointer; the charger under it lights up; drop to choose.
+        const clearGhost = () => { if (drag && drag.g) drag.g.remove(); w.querySelectorAll('.drag-ghost').forEach((g) => g.remove()); markOver(-1); card.classList.remove('dragging'); gsap.set(card, { opacity: 1 }); };
+        card.addEventListener('pointerdown', (e) => {
+          if (!ctx.alive || solved || Game.busy || Game.paused) return;
+          if (e.button > 0) return;
+          e.preventDefault();
+          dragHint.remove(); clearGhost(); armIdle();
+          drag = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId };
+          try { card.setPointerCapture(e.pointerId); } catch (err) { /* pointer already released */ }
+        });
+        card.addEventListener('pointermove', (e) => {
+          if (!drag || e.pointerId !== drag.id) return;
+          if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 8) {
+            drag.moved = true; BSC.Audio.play('pick'); UI.feedback(null); select(false);
+            const g = UI.el('div', 'drag-ghost'); const img = UI.el('img'); img.src = Cast.src(L.bot, 'neutral'); img.style.height = '200px'; img.alt = ''; img.draggable = false;
+            g.appendChild(img); w.appendChild(g); drag.g = g; card.classList.add('dragging'); gsap.set(card, { opacity: 0.35 }); tag.style.opacity = 0; // the bot left behind fades while its copy is dragged
+          }
+          if (!drag.g) return;
           const sr = document.getElementById('stage').getBoundingClientRect(), k = UI.scale();
           drag.g.style.left = (e.clientX - sr.left) / k + 'px'; drag.g.style.top = (e.clientY - sr.top) / k + 'px';
-          slots.forEach((s) => s.classList.remove('over'));
-          const over = document.elementFromPoint(e.clientX, e.clientY); const sl = over && over.closest('.slot');
-          if (sl) sl.classList.add('over');
-        }
-      });
-      const end = (e) => {
-        if (!drag || e.pointerId !== drag.id) return;
-        const dd = drag; drag = null; card.classList.remove('dragging');
-        slots.forEach((s) => s.classList.remove('over'));
-        if (dd.g) {
-          dd.g.remove();
-          if (e.type !== 'pointerup') return; // cancelled or capture lost: just put the bot back
-          const over = document.elementFromPoint(e.clientX, e.clientY); const sl = over && over.closest('.slot');
-          if (sl) { BSC.Audio.play('drop'); drop(slots.indexOf(sl)); } else { Anim.shake(card, 6); }
-        } else if (e.type === 'pointerup') select(!picked);
-      };
-      card.addEventListener('pointerup', end); card.addEventListener('pointercancel', end);
-      card.addEventListener('lostpointercapture', (e) => { if (drag && e.pointerId === drag.id) end(e); });
-      window.addEventListener('blur', () => { if (drag) clearDrag(); });
+          const over = document.elementFromPoint(e.clientX, e.clientY), sl = over && over.closest('.slot');
+          markOver(sl ? slots.indexOf(sl) : -1);
+        });
+        const end = (e) => {
+          if (!drag || e.pointerId !== drag.id) return;
+          const dd = drag; drag = null;
+          if (!dd.moved) { if (e.type === 'pointerup') select(!picked); return; }
+          dd.g.remove(); card.classList.remove('dragging'); gsap.set(card, { opacity: 1 });
+          const over = e.type === 'pointerup' && document.elementFromPoint(e.clientX, e.clientY), sl = over && over.closest('.slot');
+          if (sl) { BSC.Audio.play('drop'); drop(slots.indexOf(sl)); } else { markOver(-1); tag.style.opacity = 1; Anim.shake(card, 6); }
+        };
+        card.addEventListener('pointerup', end); card.addEventListener('pointercancel', end);
+        card.addEventListener('lostpointercapture', (e) => { if (drag && e.pointerId === drag.id) end(e); });
+        window.addEventListener('blur', () => { if (drag) { clearGhost(); drag = null; tag.style.opacity = 1; } });
+      }
       card.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && !solved) { e.preventDefault(); select(!picked); } });
       slots.forEach((s, k) => {
         const act = () => { if (!ctx.alive || solved || Game.busy || Game.paused) return; armIdle(); if (picked) drop(k); else { UI.feedback('info', 'First pick up the bot: drag it here, or tap the bot and then this slot.'); Anim.shake(card, 6); } };

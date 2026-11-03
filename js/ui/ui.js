@@ -32,6 +32,7 @@
     },
     resetStage() {
       $('#world').innerHTML = '';
+      delete $('#stage').dataset.layout;
       BSC.Cast.clear(); // actors from the last scene are gone with #world; don't let a scene reuse them
       $('#fx').innerHTML = '';
       UI.feedback(null);
@@ -60,14 +61,9 @@
     },
     /** Transient feedback strip at the top of the task area (separate from the standing question). */
     feedback(kind, html) {
-      const f = $('#feedback');
-      if (!kind) { f.innerHTML = ''; f.className = ''; return; }
-      const icon = { ok: '✓', bad: '!', hint: '?', info: 'i', warn: '!' }[kind] || '';
-      f.className = 'show ' + kind;
-      f.innerHTML = `<span class="ic" aria-hidden="true">${icon}</span><span class="tx">${fmt(html)}</span>`;
-      BSC.Anim.fromTo(f, { y: -16, opacity: 0, scale: 0.9 }, { y: 0, opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(2.2)' });
-      if (kind === 'ok') { BSC.Audio.play('ok'); UI.hud.reward(f.querySelector('.ic')); }
-      if (kind === 'bad') { BSC.Audio.play('wrong'); BSC.Anim.shake(f, 8); }
+      const ic = BSC.Dialog.feedback(kind, html); // shown in the speaker's instruction box
+      if (kind === 'ok') { BSC.Audio.play('ok'); UI.hud.reward(ic); }
+      if (kind === 'bad') { BSC.Audio.play('wrong'); BSC.Anim.shake($('#dialog .bubble'), 8); }
     },
 
     /** Fraction entry: two boxes + number tiles. onCheck(top, bottom, api). Changing anything clears feedback. */
@@ -116,14 +112,11 @@
     hud: {
       build() {
         const hud = $('#hud');
-        // Header: only the sound toggle is a button (Esc still opens Pause; hints appear by themselves after wrong tries)
-        hud.innerHTML = `<div class="hud-title"><span class="chip" id="hud-level"></span><span id="hud-name"></span></div>
-          <div class="hud-progress" id="hud-progress" aria-label="Progress"></div>
-          <div class="hud-bolts" id="hud-bolts" aria-label="Bolts collected"><span class="bi" aria-hidden="true">⚡</span><b id="hud-bolt-n">0</b></div>
-          <button type="button" class="hbtn icon" id="hud-sound" aria-label="Sound"></button>`;
+        // Header: just the sound toggle (Esc still opens Pause; hints appear by themselves after wrong tries).
+        // Title, progress and the bolt counter are gone; their functions below quietly do nothing without them.
+        hud.innerHTML = `<button type="button" class="hbtn icon" id="hud-sound" aria-label="Sound"></button>`;
         $('#hud-sound').addEventListener('click', () => { const s = BSC.Store.get().settings; BSC.Audio.setSound(!s.sound); UI.hud.sound(); BSC.Audio.play('tap'); });
         UI.hud.sound();
-        $('#hud-bolt-n').textContent = BSC.Store.get().bolts || 0;
       },
       sound() { const on = BSC.Store.get().settings.sound; const b = $('#hud-sound'); b.textContent = on ? '🔊' : '🔇'; b.setAttribute('aria-label', on ? 'Sound on' : 'Sound off'); },
       update(id) {
@@ -131,7 +124,7 @@
         const flow = BSC.Game.FLOW.find((f) => f.id === id);
         hud.hidden = !flow;
         $('#stage').dataset.level = flow ? flow.level : '';
-        if (!flow) return;
+        if (!flow || !$('#hud-level')) return;
         $('#hud-level').textContent = `Level ${flow.level}`;
         $('#hud-name').textContent = flow.label;
       },
@@ -156,6 +149,7 @@
       reward(fromEl) {
         const s = BSC.Store.get(); s.bolts = (s.bolts || 0) + 1; BSC.Store.save();
         const n = $('#hud-bolt-n'), pill = $('#hud-bolts');
+        if (!pill) { BSC.Audio.play('star'); if (fromEl) { const [x, y] = BSC.Anim.centre(fromEl); BSC.Anim.burst(x, y, 'star', 8); } return; } // no counter on screen: just a sparkle
         const land = () => { n.textContent = s.bolts; BSC.Anim.fromTo(pill, { scale: 1.35 }, { scale: 1, duration: 0.5, ease: 'back.out(3)' }); BSC.Audio.play('star'); };
         if (BSC.Anim.reduced || !fromEl || $('#hud').hidden) { land(); return; }
         const [x0, y0] = BSC.Anim.centre(fromEl), [x1, y1] = BSC.Anim.centre($('.bi', pill));

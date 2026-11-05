@@ -110,7 +110,7 @@
     return new Promise((resolve, reject) => {
       const w = UI.world(); w.innerHTML = ''; UI.feedback(null); UI.actions([]);
       UI.$('#stage').dataset.layout = 'duel'; // feedback moves above the cards (see CSS)
-      let phase = 'spin', wrong = 0, recut = false;
+      let phase = 'start', wrong = 0, recut = false;
       const st = { a: 0, b: 0 };
       const sides = {};
       const BW = Battery.wide(R.shape) ? 240 : 170;
@@ -121,27 +121,19 @@
         w.appendChild(s);
         const bot = name.toLowerCase();
         Cast.add('bot' + k, { char: bot, pose: 'neutral', x: k === 'a' ? 100 : 1180, bottom: 118, h: 270, flip: k === 'b' && false, cls: 'small' });
-        const wheel = UI.el('div', 'wheel-wrap'); wheel.innerHTML = '<img class="wheel" src="assets/props/l3_charge_wheel.webp" alt=""><div class="pointer"></div><div class="wfr"><span class="label-plate dim">?</span></div>';
-        s.appendChild(wheel);
+        // the charge is shown straight away (no spin wheel)
+        const wheel = UI.el('div', 'duel-frac'); wheel.innerHTML = `<div class="wfr"><span class="label-plate">${UI.frac(n, d)}</span></div>`;
+        s.appendChild(wheel); Cast.screen('bot' + k, UI.frac(n, d));
         const holder = UI.el('div'); holder.style.cssText = 'display:grid;justify-items:center;gap:8px;'; s.appendChild(holder);
         sides[k] = { el: s, name, n, d, bot, wheel, holder, batt: null };
       });
       const choices = UI.el('div', 'choices'); w.appendChild(choices);
       const track = UI.el('div'); w.appendChild(track);
 
-      BSC.sayLines(ctx, R.tutorial ? [['Byte', 'New delivery! Which bot should I send?'], ['Ira', 'Tap Spin! to see their charge.']]
-        : [['Byte', 'Which bot should I send?'], ['Ira', 'Tap Spin!']], () => phase === 'spin');
-
-      // ---------- spin ----------
-      const spinBtn = UI.button('🎡 Spin!', { variant: 'primary', onClick: () => doSpin() });
-      UI.actions([spinBtn]);
-      async function doSpin() {
-        if (phase !== 'spin') return; phase = 'spinning'; UI.actions([]);
-        BSC.Audio.play('spin');
-        await ctx.lock(() => ctx.play(Anim.to([sides.a.wheel.querySelector('img'), sides.b.wheel.querySelector('img')], { rotation: (i) => 1080 + i * 140, duration: 1.5, ease: 'power3.out' })));
-        ['a', 'b'].forEach((k) => { const S = sides[k]; S.wheel.querySelector('.wfr').innerHTML = `<span class="label-plate">${UI.frac(S.n, S.d)}</span>`; Anim.pop(S.wheel.querySelector('.wfr')); Cast.screen('bot' + k, UI.frac(S.n, S.d)); });
-        if (R.numbers) { toChoose(); return; }
-        ctx.say('Ira', R.tutorial ? `${R.a[0]} has ${R.a[1]}/${R.a[2]}. ${R.b[0]} has ${R.b[1]}/${R.b[2]}.` : `${R.a[0]} has ${R.a[1]}/${R.a[2]}. ${R.b[0]} has ${R.b[1]}/${R.b[2]}. Charge both batteries.`, { wait: false });
+      // ---------- start: charge both batteries (or, with the screens off, choose straight away) ----------
+      if (R.numbers) toChoose();
+      else {
+        ctx.say('Ira', `${R.a[0]} has ${R.a[1]}/${R.a[2]}. ${R.b[0]} has ${R.b[1]}/${R.b[2]}. Charge both batteries.`, { wait: false });
         phase = 'charge'; buildCharge();
       }
 

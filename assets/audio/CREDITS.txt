@@ -1,0 +1,16 @@
+Audio credits — all files are free, CC0 (public domain). No attribution is required; listed here as thanks.
+
+Music
+  music/theme.m4a  "Apple Cider" by Zane Little Music        https://opengameart.org/content/apple-cider          (CC0)
+  music/play.m4a   "Feel Good Island" by haeldb               https://opengameart.org/content/feel-good-island     (CC0)
+
+Sound effects (Kenney, https://kenney.nl, CC0)
+  tap     ui-audio/click1                 pick    interface-sounds/pluck_002
+  drop    interface-sounds/drop_002       cut     sci-fi-sounds/laserSmall_001
+  clunk   impact-sounds/impactMetal_light_001
+  ok      interface-sounds/confirmation_001
+  wrong   interface-sounds/error_002      charge  digital-audio/powerUp3
+  gate    sci-fi-sounds/doorOpen_000      holo    digital-audio/phaserUp2
+  star    digital-audio/pepSound1         win     music-jingles/jingles_STEEL07
+  roll    sci-fi-sounds/engineCircular_000 (trimmed with fade-out)
+Effects were trimmed, converted to mono WAV and volume-matched.

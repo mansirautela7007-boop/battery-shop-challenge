@@ -44,6 +44,7 @@
       Game.state = ['title', 'levels'].includes(id) ? id : 'scene';
       if (Game.state === 'scene') BSC.Store.setResume(id, params.step || 0);
       BSC.UI.hud.update(id);
+      if (BSC.Audio) BSC.Audio.music(/^l\d/.test(id) ? 'play' : 'theme'); // calm loop while learning/playing
       const ctx = new Context(Game.token, id);
       Promise.resolve()
         .then(() => scene(ctx, params))

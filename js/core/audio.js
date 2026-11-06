@@ -1,7 +1,8 @@
-/* Small Web Audio synth: sound effects + a soft ambient pad. No audio files to load or break. */
+/* Game audio: recorded sound effects + background music (free CC0 files, see assets/audio/CREDITS.txt),
+   with the small Web Audio synth below as a fallback if a file can't play. */
 (function (BSC) {
   'use strict';
-  let ctx = null, master = null, musicGain = null, musicNodes = [];
+  let ctx = null, master = null;
   const settings = () => BSC.Store.get().settings;
 
   function ensure() {
@@ -10,7 +11,6 @@
     if (!AC) return null;
     ctx = new AC();
     master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
-    musicGain = ctx.createGain(); musicGain.gain.value = 0; musicGain.connect(master);
     return ctx;
   }
   function tone(freq, dur, { type = 'sine', when = 0, vol = 0.12, slideTo = null } = {}) {
@@ -31,7 +31,7 @@
     s.connect(f).connect(g).connect(master); s.start(ctx.currentTime + when);
   }
 
-  const sfx = {
+  const synthSfx = {
     tap: () => tone(620, 0.06, { type: 'triangle', vol: 0.06 }),
     pick: () => tone(440, 0.12, { type: 'sine', slideTo: 760, vol: 0.08 }),
     drop: () => tone(300, 0.1, { type: 'triangle', vol: 0.08 }),
@@ -48,28 +48,62 @@
     roll: () => noise(0.4, 0.02),
   };
 
+  // Recorded effects: a few <audio> copies per sound so quick repeats overlap (works from file://).
+  const SFX = ['tap', 'pick', 'drop', 'cut', 'clunk', 'ok', 'wrong', 'charge', 'gate', 'holo', 'star', 'win', 'roll'];
+  const SFX_VOL = { tap: 0.5, roll: 0.55, star: 0.7 };
+  const pool = {};
+  function sfxEl(name) {
+    const list = pool[name] || (pool[name] = []);
+    let el = list.find((a) => a.paused || a.ended);
+    if (!el && list.length < 4) { el = new Audio(`assets/audio/sfx/${name}.wav`); el.preload = 'auto'; el.volume = SFX_VOL[name] || 0.8; list.push(el); }
+    return el;
+  }
+  function playSfx(name) {
+    if (!settings().sound) return;
+    if (!SFX.includes(name)) return (synthSfx[name] || synthSfx.tap)();
+    const el = sfxEl(name);
+    if (!el) return;
+    el.currentTime = 0;
+    const p = el.play();
+    if (p && p.catch) p.catch(() => { try { (synthSfx[name] || synthSfx.tap)(); } catch (e) { /* audio is optional */ } });
+  }
+
+  // Background music: a cheerful theme for the menu and story, a calm loop for learning and play.
+  const TRACKS = { theme: 'assets/audio/music/theme.m4a', play: 'assets/audio/music/play.m4a' };
+  const MUSIC_VOL = { theme: 0.32, play: 0.22 };
+  const tracks = {};
+  let want = null, duck = 1, fadeTimer = null;
+  function trackEl(name) {
+    if (!tracks[name]) { const a = new Audio(TRACKS[name]); a.loop = true; a.preload = 'auto'; a.volume = 0; tracks[name] = a; }
+    return tracks[name];
+  }
+  function fadeMusic() {
+    clearInterval(fadeTimer);
+    fadeTimer = setInterval(() => {
+      let moving = false;
+      Object.entries(tracks).forEach(([name, a]) => {
+        const target = settings().music && name === want ? MUSIC_VOL[name] * duck : 0;
+        const v = a.volume + Math.max(-0.02, Math.min(0.02, target - a.volume));
+        a.volume = Math.max(0, Math.min(1, v));
+        if (Math.abs(target - a.volume) > 0.001) moving = true;
+        else if (target === 0 && !a.paused) a.pause();
+      });
+      if (!moving) clearInterval(fadeTimer);
+    }, 50);
+  }
   function startMusic() {
-    if (!settings().music || !ensure() || musicNodes.length) return;
-    // A quiet two-chord pad: gentle and non-distracting.
-    const chords = [[220, 277.2, 329.6], [196, 246.9, 311.1]];
-    const t0 = ctx.currentTime;
-    chords[0].forEach((f, i) => {
-      const o = ctx.createOscillator(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain();
-      o.type = 'sine'; o.frequency.value = f;
-      lfo.frequency.value = 0.07 + i * 0.03; lg.gain.value = 0.012; lfo.connect(lg).connect(g.gain);
-      g.gain.value = 0.02; o.connect(g).connect(musicGain); o.start(); lfo.start();
-      // alternate chord every 8 s
-      for (let k = 1; k < 200; k++) o.frequency.setValueAtTime(chords[k % 2][i], t0 + k * 8);
-      musicNodes.push(o, lfo);
-    });
-    musicGain.gain.setTargetAtTime(0.35, ctx.currentTime, 1.5);
+    if (!settings().music || !want) return;
+    const a = trackEl(want);
+    if (a.paused) { const p = a.play(); if (p && p.catch) p.catch(() => {}); } // blocked until the first tap: unlock() retries
+    fadeMusic();
   }
-  function stopMusic() {
-    if (!ctx) return;
-    musicGain.gain.setTargetAtTime(0, ctx.currentTime, 0.3);
-    const nodes = musicNodes; musicNodes = [];
-    setTimeout(() => nodes.forEach((n) => { try { n.stop(); } catch (e) { /* already stopped */ } }), 1200);
+  function stopMusic() { fadeMusic(); }
+  /** Pick the background track ('theme' / 'play'); it cross-fades from the current one. */
+  function music(name) {
+    if (!TRACKS[name] || want === name) return;
+    want = name; startMusic(); fadeMusic();
   }
+  function setDuck(d) { if (duck !== d) { duck = d; fadeMusic(); } }
 
   // Dialogue voice. Fixed lines play a recorded file (one <audio> element reused, works from file://).
   // Lines built at runtime (level numbers) use the browser's free speech synthesis, matched per character.
@@ -91,7 +125,7 @@
     return all.find((x) => x.lang.replace('_', '-').startsWith(cfg.lang)) || all.find((x) => x.lang.startsWith('en')) || null;
   }
   let voiceDone = null; // resolves the current line's promise: true = spoken to the end, false = none/stopped/failed
-  const finish = (ok) => { const r = voiceDone; voiceDone = null; if (r) r(ok); };
+  const finish = (ok) => { setDuck(1); const r = voiceDone; voiceDone = null; if (r) r(ok); };
   function stopVoice() {
     if (voiceEl) { voiceEl.onended = voiceEl.onerror = null; voiceEl.pause(); voiceEl.removeAttribute('src'); voiceEl.load(); }
     if (synth) synth.cancel();
@@ -102,6 +136,7 @@
     stopVoice();
     if (!settings().sound) return Promise.resolve(false);
     const done = new Promise((res) => { voiceDone = res; });
+    setDuck(0.45); // music dips under speech
     const file = BSC.Voices && BSC.Voices[who + '|' + text];
     if (file) {
       if (!voiceEl) { voiceEl = new Audio(); voiceEl.preload = 'auto'; }
@@ -124,12 +159,12 @@
   }
 
   BSC.Audio = {
-    unlock() { if (ensure() && ctx.state === 'suspended') ctx.resume(); if (settings().music) startMusic(); },
-    play(name) { try { (sfx[name] || sfx.tap)(); } catch (e) { /* audio is optional */ } },
-    voice, stopVoice,
+    unlock() { if (ensure() && ctx.state === 'suspended') ctx.resume(); startMusic(); },
+    play(name) { try { playSfx(name); } catch (e) { /* audio is optional */ } },
+    music, voice, stopVoice,
     setSound(on) { settings().sound = on; BSC.Store.save(); if (!on) stopVoice(); },
     setMusic(on) { settings().music = on; BSC.Store.save(); if (on) startMusic(); else stopMusic(); },
-    suspend() { if (ctx && ctx.state === 'running') ctx.suspend(); if (voiceEl && voiceEl.src) voiceEl.pause(); if (synth) synth.pause(); },
-    resume() { if (ctx && ctx.state === 'suspended') ctx.resume(); if (voiceEl && voiceEl.src && !voiceEl.ended) voiceEl.play().catch(() => {}); if (synth) synth.resume(); },
+    suspend() { if (ctx && ctx.state === 'running') ctx.suspend(); Object.values(tracks).forEach((a) => a.pause()); if (voiceEl && voiceEl.src) voiceEl.pause(); if (synth) synth.pause(); },
+    resume() { if (ctx && ctx.state === 'suspended') ctx.resume(); startMusic(); if (voiceEl && voiceEl.src && !voiceEl.ended) voiceEl.play().catch(() => {}); if (synth) synth.resume(); },
   };
 })(window.BSC = window.BSC || {});
